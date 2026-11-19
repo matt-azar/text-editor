@@ -87,6 +87,7 @@ const HELP_SHORTCUTS: { label: string; keys: string[] }[] = [
   { label: "Move Line Up", keys: ["Alt", "Up"] },
   { label: "Move Line Down", keys: ["Alt", "Down"] },
   { label: "Word Wrap", keys: ["Alt", "Z"] },
+  { label: "Zen Mode", keys: ["Ctrl", "Shift", "Z"] },
   { label: "Zoom In", keys: ["Ctrl", "+"] },
   { label: "Zoom Out", keys: ["Ctrl", "−"] },
   { label: "Reset Zoom", keys: ["Ctrl", "0"] },
@@ -94,6 +95,7 @@ const HELP_SHORTCUTS: { label: string; keys: string[] }[] = [
   { label: "Previous Tab", keys: ["Ctrl", "Shift", "Tab"] },
 ];
 
+const titlebarEl = document.querySelector("#titlebar") as HTMLElement;
 const tabsEl = document.querySelector("#tabs") as HTMLElement;
 const emptyEl = document.querySelector("#empty") as HTMLElement;
 const editorEl = document.querySelector("#editor") as HTMLElement;
@@ -114,6 +116,8 @@ let menuName: string | null = null;
 let menuIndex = 0;
 let altAlone = false;
 let closing = false;
+/** Session-only: hide titlebar, tabs, and status for a naked editor. */
+let zenMode = false;
 
 type ChromeSettings = {
   showTabs: boolean;
@@ -228,14 +232,23 @@ function renderTabs(): void {
 
 function renderChrome(): void {
   const hasTabs = tabs.length > 0;
+  document.body.classList.toggle("zen", zenMode);
+  titlebarEl.hidden = zenMode;
   emptyEl.hidden = hasTabs;
-  tabsEl.hidden = !(hasTabs && chrome.showTabs);
-  statusEl.hidden = !(hasTabs && chrome.showStatusBar);
+  tabsEl.hidden = zenMode || !(hasTabs && chrome.showTabs);
+  statusEl.hidden = zenMode || !(hasTabs && chrome.showStatusBar);
   editorEl.hidden = !hasTabs;
+  if (zenMode) closeMenu();
   renderTabs();
   const tab = activeTab();
   if (tab) paintStatus(tab);
   void syncTitle();
+  if (zenMode && hasTabs) view?.focus();
+}
+
+function toggleZenMode(): void {
+  zenMode = !zenMode;
+  renderChrome();
 }
 
 function cycleTab(delta: number): void {
@@ -482,6 +495,7 @@ function menuItems(name: string): MenuItem[] {
     return [
       { label: "Word Wrap", accel: "w", shortcut: "Alt+Z", enabled: true, checked: settings.wordWrap, run: toggleWrap },
       { label: "Line Numbers", accel: "l", enabled: true, checked: settings.lineNumbers, run: toggleNumbers },
+      { label: "Zen Mode", accel: "z", shortcut: "Ctrl+Shift+Z", enabled: true, checked: zenMode, run: toggleZenMode },
       { label: "Zoom In", accel: "i", shortcut: "Ctrl++", enabled: true, run: () => zoom(1) },
       { label: "Zoom Out", accel: "o", shortcut: "Ctrl+-", enabled: true, run: () => zoom(-1) },
       { label: "Reset Zoom", accel: "r", shortcut: "Ctrl+0", enabled: true, run: () => zoom(0) },
@@ -544,7 +558,7 @@ function openMenu(name: string, focusIndex = 0): void {
   items.forEach((item, index) => {
     if (index === items.length - 1 && name === "File") menu.append(separator());
     if (name === "Edit" && (item.label === "Cut" || item.label === "Find" || item.label === "Select All")) menu.append(separator());
-    if (name === "View" && item.label === "Zoom In") menu.append(separator());
+    if (name === "View" && (item.label === "Zen Mode" || item.label === "Zoom In")) menu.append(separator());
     if (name === "Settings" && item.label === "Tab Length") menu.append(separator());
     menu.append(menuButton(item));
   });
@@ -762,6 +776,14 @@ function onKeyDown(event: KeyboardEvent): void {
 
   if (modal.childElementCount > 0) return;
 
+  const modKey = event.ctrlKey || event.metaKey;
+  if (modKey && event.shiftKey && !event.altKey && event.key.toLowerCase() === "z") {
+    event.preventDefault();
+    event.stopPropagation();
+    toggleZenMode();
+    return;
+  }
+
   if (menuName) {
     const entries = menuEntries();
     if (event.key === "Escape") {
@@ -853,7 +875,7 @@ function onKeyDown(event: KeyboardEvent): void {
 }
 
 function onKeyUp(event: KeyboardEvent): void {
-  if (event.key === "Alt" && altAlone && !menuName && modal.childElementCount === 0) {
+  if (event.key === "Alt" && altAlone && !zenMode && !menuName && modal.childElementCount === 0) {
     event.preventDefault();
     openMenu("File");
   }
@@ -881,7 +903,8 @@ function bindWindowControls(): void {
     if (inTauri()) void getCurrentWindow().close();
     else void exitApp();
   });
-  window.addEventListener("keydown", onKeyDown);
+  // Capture so Ctrl+Shift+Z wins over CodeMirror's Linux redo binding.
+  window.addEventListener("keydown", onKeyDown, true);
   window.addEventListener("keyup", onKeyUp);
   document.addEventListener("mousedown", (event) => {
     const target = event.target as Node;

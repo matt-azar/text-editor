@@ -3,6 +3,7 @@ import { test } from "node:test";
 import {
   fileName,
   isDirty,
+  nextTabIndex,
   nextUntitled,
   pushRecent,
   windowTitle,
@@ -41,4 +42,11 @@ test("pushRecent moves a duplicate to the front and caps the list", () => {
   assert.equal(capped.length, 10);
   assert.equal(capped[0], "f11");
   assert.equal(capped.includes("f0"), false);
+});
+
+test("nextTabIndex wraps around open tabs", () => {
+  assert.equal(nextTabIndex(0, 0, 1), -1);
+  assert.equal(nextTabIndex(3, 0, 1), 1);
+  assert.equal(nextTabIndex(3, 2, 1), 0);
+  assert.equal(nextTabIndex(3, 0, -1), 2);
 });

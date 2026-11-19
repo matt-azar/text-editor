@@ -235,7 +235,8 @@ function renderTabs(): void {
 function renderChrome(): void {
   const hasTabs = tabs.length > 0;
   document.body.classList.toggle("zen", zenMode);
-  titlebarEl.hidden = zenMode;
+  // Keep the titlebar mounted in Zen so the mark stays a drag handle; CSS hides the rest.
+  titlebarEl.hidden = false;
   emptyEl.hidden = hasTabs;
   tabsEl.hidden = zenMode || !(hasTabs && chrome.showTabs);
   statusEl.hidden = zenMode || !(hasTabs && chrome.showStatusBar);
@@ -963,12 +964,18 @@ function bindWindowControls(): void {
     if (inTauri()) void getCurrentWindow().close();
     else void exitApp();
   });
-  // Fallback when data-tauri-drag-region alone is unreliable in WebView2.
+  const startWindowDrag = (event: Event): void => {
+    if (!inTauri() || (event as MouseEvent).button !== 0) return;
+    event.preventDefault();
+    void getCurrentWindow().startDragging();
+  };
+  // Mark + Zen edges: data-tauri-drag-region can miss SVG/empty hits in WebView2.
+  document.querySelector("#brand-drag")?.addEventListener("mousedown", startWindowDrag);
+  document.querySelector(".mark-drag")?.addEventListener("mousedown", startWindowDrag);
   for (const edge of zenDragEl.querySelectorAll(".zen-edge")) {
     edge.addEventListener("mousedown", (event) => {
-      if (!inTauri() || !zenMode || (event as MouseEvent).button !== 0) return;
-      event.preventDefault();
-      void getCurrentWindow().startDragging();
+      if (!zenMode) return;
+      startWindowDrag(event);
     });
   }
   // Capture so Ctrl+Shift+Z wins over CodeMirror's Linux redo binding.

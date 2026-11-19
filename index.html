@@ -10,9 +10,11 @@
   <body>
     <div id="app">
       <header id="titlebar">
-        <svg class="brand" viewBox="0 0 64 64" aria-hidden="true" data-tauri-drag-region>
-          <path fill="currentColor" d="M10 54 V10 H19.5 L32 40 L44.5 10 H54 V54 H45.8 V26 L32 50 L18.2 26 V54 Z"/>
-        </svg>
+        <div id="brand-drag" class="brand-drag" data-tauri-drag-region title="Drag window" aria-label="Drag window">
+          <svg class="brand" viewBox="0 0 64 64" aria-hidden="true">
+            <path fill="currentColor" d="M10 54 V10 H19.5 L32 40 L44.5 10 H54 V54 H45.8 V26 L32 50 L18.2 26 V54 Z"/>
+          </svg>
+        </div>
         <nav id="menubar" aria-label="Application"></nav>
         <div class="drag" data-tauri-drag-region></div>
         <div class="controls">
@@ -29,9 +31,11 @@
       </header>
       <div id="tabs" hidden></div>
       <div id="empty">
-        <svg class="mark" viewBox="0 0 64 64" aria-hidden="true">
-          <path fill="currentColor" d="M10 54 V10 H19.5 L32 40 L44.5 10 H54 V54 H45.8 V26 L32 50 L18.2 26 V54 Z"/>
-        </svg>
+        <div class="mark-drag" data-tauri-drag-region title="Drag window" aria-label="Drag window">
+          <svg class="mark" viewBox="0 0 64 64" aria-hidden="true">
+            <path fill="currentColor" d="M10 54 V10 H19.5 L32 40 L44.5 10 H54 V54 H45.8 V26 L32 50 L18.2 26 V54 Z"/>
+          </svg>
+        </div>
         <div class="shortcuts" id="shortcuts"></div>
       </div>
       <div id="editor" hidden></div>

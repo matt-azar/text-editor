@@ -4,9 +4,9 @@ A small frameless text editor for Windows, built with Tauri 2 and CodeMirror 6.
 
 ## Download
 
-**[Windows installer (v0.1.0)](https://gofile.io/d/E3CBR73G)** — `Text-Editor_0.1.0_x64-setup.exe` (~1.57&nbsp;MB)
+**[Windows installer (v0.1.0)](https://text-editor-download.apps.grok.bot/Text-Editor_0.1.0_x64-setup.exe)** — `Text-Editor_0.1.0_x64-setup.exe` (~1.57&nbsp;MB)
 
-Hosted on [Gofile](https://gofile.io/d/E3CBR73G) (open the page and use Download). Origin blob/raw URLs cannot serve this ~1.5&nbsp;MB binary even though it is on tag [`v0.1.0`](https://cursor.com/codebase/matt-azar/text-editor/tree/v0.1.0) under `releases/` (API: file too large; UI 404). The NSIS setup registers `.txt` and `.md` and will download WebView2 on Windows 10 if needed.
+Download page: https://text-editor-download.apps.grok.bot. Origin blob/raw URLs cannot serve this ~1.5&nbsp;MB binary even though it is on tag [`v0.1.0`](https://cursor.com/codebase/matt-azar/text-editor/tree/v0.1.0) under `releases/` (API: file too large; UI 404). The NSIS setup registers `.txt` and `.md` and will download WebView2 on Windows 10 if needed.
 
 ## Develop
 

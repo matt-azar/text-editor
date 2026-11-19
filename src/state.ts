@@ -24,3 +24,10 @@ export function windowTitle(name: string | null, dirty: boolean): string {
 export function pushRecent(list: string[], path: string, cap = 10): string[] {
   return [path, ...list.filter((item) => item !== path)].slice(0, cap);
 }
+
+/** Cycle an open-tab index; returns -1 when there are no tabs. */
+export function nextTabIndex(length: number, current: number, delta: number): number {
+  if (length <= 0) return -1;
+  const start = ((current % length) + length) % length;
+  return (start + delta + length * 10) % length;
+}

@@ -33,6 +33,7 @@ import {
 import {
   fileName,
   isDirty,
+  nextTabIndex,
   nextUntitled,
   windowTitle,
   type LineEnding,
@@ -84,6 +85,8 @@ const HELP_SHORTCUTS: { label: string; keys: string[] }[] = [
   { label: "Zoom In", keys: ["Ctrl", "+"] },
   { label: "Zoom Out", keys: ["Ctrl", "−"] },
   { label: "Reset Zoom", keys: ["Ctrl", "0"] },
+  { label: "Next Tab", keys: ["Ctrl", "Tab"] },
+  { label: "Previous Tab", keys: ["Ctrl", "Shift", "Tab"] },
 ];
 
 const tabsEl = document.querySelector("#tabs") as HTMLElement;
@@ -107,7 +110,13 @@ let menuIndex = 0;
 let altAlone = false;
 let closing = false;
 
+type ChromeSettings = {
+  showTabs: boolean;
+  showStatusBar: boolean;
+};
+
 const settings: EditorSettings = loadSettings();
+const chrome: ChromeSettings = loadChrome();
 
 function inTauri(): boolean {
   return typeof window !== "undefined" && "__TAURI_INTERNALS__" in window;
@@ -126,6 +135,18 @@ function saveSettings(): void {
   localStorage.setItem("text-editor-font", String(settings.fontSize));
   localStorage.setItem("text-editor-wrap", settings.wordWrap ? "on" : "off");
   localStorage.setItem("text-editor-gutter", settings.lineNumbers ? "on" : "off");
+}
+
+function loadChrome(): ChromeSettings {
+  return {
+    showTabs: localStorage.getItem("text-editor-show-tabs") !== "off",
+    showStatusBar: localStorage.getItem("text-editor-show-status") !== "off",
+  };
+}
+
+function saveChrome(): void {
+  localStorage.setItem("text-editor-show-tabs", chrome.showTabs ? "on" : "off");
+  localStorage.setItem("text-editor-show-status", chrome.showStatusBar ? "on" : "off");
 }
 
 function activeTab(): Tab | null {
@@ -222,13 +243,34 @@ function renderTabs(): void {
 function renderChrome(): void {
   const hasTabs = tabs.length > 0;
   emptyEl.hidden = hasTabs;
-  tabsEl.hidden = !hasTabs;
-  statusEl.hidden = !hasTabs;
+  tabsEl.hidden = !(hasTabs && chrome.showTabs);
+  statusEl.hidden = !(hasTabs && chrome.showStatusBar);
   editorEl.hidden = !hasTabs;
   renderTabs();
   const tab = activeTab();
   if (tab) paintStatus(tab);
   void syncTitle();
+}
+
+function cycleTab(delta: number): void {
+  if (tabs.length === 0) return;
+  const current = tabs.findIndex((tab) => tab.id === activeId);
+  const next = nextTabIndex(tabs.length, current < 0 ? 0 : current, delta);
+  if (next < 0) return;
+  const tab = tabs[next];
+  if (tab) activate(tab.id);
+}
+
+function toggleShowTabs(): void {
+  chrome.showTabs = !chrome.showTabs;
+  saveChrome();
+  renderChrome();
+}
+
+function toggleShowStatusBar(): void {
+  chrome.showStatusBar = !chrome.showStatusBar;
+  saveChrome();
+  renderChrome();
 }
 
 function paintStatus(tab: Tab): void {
@@ -453,13 +495,19 @@ function menuItems(name: string): MenuItem[] {
       { label: "Reset Zoom", accel: "r", shortcut: "Ctrl+0", enabled: true, run: () => zoom(0) },
     ];
   }
+  if (name === "Settings") {
+    return [
+      { label: "Show Tabs", accel: "t", enabled: true, checked: chrome.showTabs, run: toggleShowTabs },
+      { label: "Show Status Bar", accel: "s", enabled: true, checked: chrome.showStatusBar, run: toggleShowStatusBar },
+    ];
+  }
   return [
     { label: "Keyboard Shortcuts", accel: "k", enabled: true, run: () => showShortcuts() },
     { label: "About", accel: "a", enabled: true, run: () => showAbout() },
   ];
 }
 
-const MENU_NAMES = ["File", "Edit", "Selection", "View", "Help"];
+const MENU_NAMES = ["File", "Edit", "Selection", "View", "Settings", "Help"];
 
 function buildMenus(): void {
   for (const name of MENU_NAMES) {
@@ -775,6 +823,9 @@ function onKeyDown(event: KeyboardEvent): void {
     event.preventDefault();
     const tab = activeTab();
     if (tab) void closeTab(tab);
+  } else if (mod && !event.altKey && event.key === "Tab") {
+    event.preventDefault();
+    cycleTab(event.shiftKey ? -1 : 1);
   } else if (mod && !event.altKey && (event.key === "=" || event.key === "+")) {
     event.preventDefault();
     zoom(1);

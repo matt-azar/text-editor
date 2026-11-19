@@ -76,7 +76,7 @@ const SHORTCUTS: { label: string; keys: string[] }[] = [
   { label: "Save", keys: ["Ctrl", "S"] },
   { label: "Find", keys: ["Ctrl", "F"] },
   { label: "Close File", keys: ["Ctrl", "W"] },
-  { label: "Open recent", keys: ["Ctrl", "R"] },
+  { label: "Open Recent", keys: ["Ctrl", "R"] },
 ];
 
 const HELP_SHORTCUTS: { label: string; keys: string[] }[] = [

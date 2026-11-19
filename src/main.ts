@@ -76,6 +76,7 @@ const SHORTCUTS: { label: string; keys: string[] }[] = [
   { label: "Save", keys: ["Ctrl", "S"] },
   { label: "Find", keys: ["Ctrl", "F"] },
   { label: "Close File", keys: ["Ctrl", "W"] },
+  { label: "Open recent", keys: ["Ctrl", "R"] },
 ];
 
 const HELP_SHORTCUTS: { label: string; keys: string[] }[] = [
@@ -337,6 +338,13 @@ async function openFile(): Promise<void> {
   }
 }
 
+/** Open the top of the recent-files list (MRU). No-op when the list is empty. */
+async function openMostRecent(): Promise<void> {
+  const path = recent[0];
+  if (!path) return;
+  await openPath(path);
+}
+
 function suggestedName(tab: Tab): string {
   if (tab.path) return fileName(tab.path);
   return tab.name.toLowerCase().endsWith(".txt") ? tab.name : `${tab.name}.txt`;
@@ -487,7 +495,7 @@ function menuItems(name: string): MenuItem[] {
     return [
       { label: "New", accel: "n", shortcut: "Ctrl+N", enabled: true, run: newFile },
       { label: "Open…", accel: "o", shortcut: "Ctrl+O", enabled: true, run: () => openFile() },
-      { label: "Open Recent", accel: "r", enabled: recent.length > 0, children: recentItems },
+      { label: "Open Recent", accel: "r", shortcut: "Ctrl+R", enabled: recent.length > 0, children: recentItems },
       { label: "Save", accel: "s", shortcut: "Ctrl+S", enabled: hasTab, run: () => saveActive(false) },
       { label: "Save As…", accel: "a", shortcut: "Ctrl+Shift+S", enabled: hasTab, run: () => saveActive(true) },
       { label: "Close", accel: "c", shortcut: "Ctrl+W", enabled: hasTab, run: () => { const tab = activeTab(); if (tab) return closeTab(tab); } },
@@ -890,6 +898,9 @@ function onKeyDown(event: KeyboardEvent): void {
   } else if (mod && !event.altKey && key === "o") {
     event.preventDefault();
     void openFile();
+  } else if (mod && !event.shiftKey && !event.altKey && key === "r") {
+    event.preventDefault();
+    void openMostRecent();
   } else if (mod && event.shiftKey && key === "s") {
     event.preventDefault();
     void saveActive(true);

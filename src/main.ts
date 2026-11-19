@@ -106,6 +106,7 @@ const statusEnding = document.querySelector("#status-ending") as HTMLElement;
 const menubar = document.querySelector("#menubar") as HTMLElement;
 const modal = document.querySelector("#modal") as HTMLElement;
 const maxButton = document.querySelector("#win-max") as HTMLButtonElement;
+const zenDragEl = document.querySelector("#zen-drag") as HTMLElement;
 
 const tabs: Tab[] = [];
 let activeId: string | null = null;
@@ -238,6 +239,8 @@ function renderChrome(): void {
   tabsEl.hidden = zenMode || !(hasTabs && chrome.showTabs);
   statusEl.hidden = zenMode || !(hasTabs && chrome.showStatusBar);
   editorEl.hidden = !hasTabs;
+  zenDragEl.hidden = !zenMode;
+  zenDragEl.setAttribute("aria-hidden", zenMode ? "false" : "true");
   if (zenMode) closeMenu();
   renderTabs();
   const tab = activeTab();
@@ -427,6 +430,12 @@ function toggleNumbers(): void {
   pushSettings();
 }
 
+function toggleHighlightCurrentLine(): void {
+  settings.highlightCurrentLine = !settings.highlightCurrentLine;
+  saveSettings();
+  pushSettings();
+}
+
 function setTabSize(size: number): void {
   settings.tabSize = size;
   saveSettings();
@@ -495,6 +504,13 @@ function menuItems(name: string): MenuItem[] {
     return [
       { label: "Word Wrap", accel: "w", shortcut: "Alt+Z", enabled: true, checked: settings.wordWrap, run: toggleWrap },
       { label: "Line Numbers", accel: "l", enabled: true, checked: settings.lineNumbers, run: toggleNumbers },
+      {
+        label: "Highlight Current Line",
+        accel: "h",
+        enabled: true,
+        checked: settings.highlightCurrentLine,
+        run: toggleHighlightCurrentLine,
+      },
       { label: "Zen Mode", accel: "z", shortcut: "Ctrl+Shift+Z", enabled: true, checked: zenMode, run: toggleZenMode },
       { label: "Zoom In", accel: "i", shortcut: "Ctrl++", enabled: true, run: () => zoom(1) },
       { label: "Zoom Out", accel: "o", shortcut: "Ctrl+-", enabled: true, run: () => zoom(-1) },
@@ -505,6 +521,13 @@ function menuItems(name: string): MenuItem[] {
     return [
       { label: "Show Tabs", accel: "t", enabled: true, checked: chrome.showTabs, run: toggleShowTabs },
       { label: "Show Status Bar", accel: "s", enabled: true, checked: chrome.showStatusBar, run: toggleShowStatusBar },
+      {
+        label: "Highlight Current Line",
+        accel: "h",
+        enabled: true,
+        checked: settings.highlightCurrentLine,
+        run: toggleHighlightCurrentLine,
+      },
       {
         label: "Tab Length",
         accel: "l",
@@ -559,7 +582,7 @@ function openMenu(name: string, focusIndex = 0): void {
     if (index === items.length - 1 && name === "File") menu.append(separator());
     if (name === "Edit" && (item.label === "Cut" || item.label === "Find" || item.label === "Select All")) menu.append(separator());
     if (name === "View" && (item.label === "Zen Mode" || item.label === "Zoom In")) menu.append(separator());
-    if (name === "Settings" && item.label === "Tab Length") menu.append(separator());
+    if (name === "Settings" && (item.label === "Highlight Current Line" || item.label === "Tab Length")) menu.append(separator());
     menu.append(menuButton(item));
   });
   document.body.append(menu);
@@ -756,7 +779,7 @@ function confirmSave(name: string): Promise<"save" | "discard" | "cancel"> {
 
 function showAbout(): Promise<string> {
   const body = document.createElement("p");
-  body.textContent = "Version 0.1.3. A small text editor.";
+  body.textContent = "Version 0.1.4. A small text editor.";
   return openDialog("Text Editor", body, [{ label: "Close", value: "close" }]);
 }
 
@@ -903,6 +926,14 @@ function bindWindowControls(): void {
     if (inTauri()) void getCurrentWindow().close();
     else void exitApp();
   });
+  // Fallback when data-tauri-drag-region alone is unreliable in WebView2.
+  for (const edge of zenDragEl.querySelectorAll(".zen-edge")) {
+    edge.addEventListener("mousedown", (event) => {
+      if (!inTauri() || !zenMode || (event as MouseEvent).button !== 0) return;
+      event.preventDefault();
+      void getCurrentWindow().startDragging();
+    });
+  }
   // Capture so Ctrl+Shift+Z wins over CodeMirror's Linux redo binding.
   window.addEventListener("keydown", onKeyDown, true);
   window.addEventListener("keyup", onKeyUp);

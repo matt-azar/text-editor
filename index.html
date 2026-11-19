@@ -11,7 +11,7 @@
     <div id="app">
       <header id="titlebar">
         <svg class="brand" viewBox="0 0 64 64" aria-hidden="true" data-tauri-drag-region>
-          <path fill="currentColor" d="M32 10 L52 54 H44.2 L39.4 41.2 H24.6 L19.8 54 H12 L32 10 Z M27.2 34.2 H36.8 L32 21.4 L27.2 34.2 Z"/>
+          <path fill="currentColor" d="M10 54 V10 H19.5 L32 40 L44.5 10 H54 V54 H45.8 V26 L32 50 L18.2 26 V54 Z"/>
         </svg>
         <nav id="menubar" aria-label="Application"></nav>
         <div class="drag" data-tauri-drag-region></div>
@@ -30,7 +30,7 @@
       <div id="tabs" hidden></div>
       <div id="empty">
         <svg class="mark" viewBox="0 0 64 64" aria-hidden="true">
-          <path fill="currentColor" d="M32 10 L52 54 H44.2 L39.4 41.2 H24.6 L19.8 54 H12 L32 10 Z M27.2 34.2 H36.8 L32 21.4 L27.2 34.2 Z"/>
+          <path fill="currentColor" d="M10 54 V10 H19.5 L32 40 L44.5 10 H54 V54 H45.8 V26 L32 50 L18.2 26 V54 Z"/>
         </svg>
         <div class="shortcuts" id="shortcuts"></div>
       </div>
@@ -43,6 +43,12 @@
           <span id="status-ending"></span>
         </span>
       </footer>
+      <div id="zen-drag" hidden aria-hidden="true">
+        <div class="zen-edge top" data-tauri-drag-region></div>
+        <div class="zen-edge right" data-tauri-drag-region></div>
+        <div class="zen-edge bottom" data-tauri-drag-region></div>
+        <div class="zen-edge left" data-tauri-drag-region></div>
+      </div>
     </div>
     <div id="modal"></div>
   </body>

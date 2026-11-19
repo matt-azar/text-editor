@@ -35,7 +35,12 @@ import {
   isDirty,
   nextTabIndex,
   nextUntitled,
+  readChromeSettings,
+  readEditorSettings,
+  TAB_SIZE_OPTIONS,
   windowTitle,
+  writeChromeSettings,
+  writeEditorSettings,
   type LineEnding,
 } from "./state.ts";
 
@@ -115,38 +120,19 @@ type ChromeSettings = {
   showStatusBar: boolean;
 };
 
-const settings: EditorSettings = loadSettings();
-const chrome: ChromeSettings = loadChrome();
+const settings: EditorSettings = readEditorSettings(localStorage);
+const chrome: ChromeSettings = readChromeSettings(localStorage);
 
 function inTauri(): boolean {
   return typeof window !== "undefined" && "__TAURI_INTERNALS__" in window;
 }
 
-function loadSettings(): EditorSettings {
-  const font = Number(localStorage.getItem("text-editor-font"));
-  return {
-    fontSize: font >= 10 && font <= 32 ? font : 14,
-    wordWrap: localStorage.getItem("text-editor-wrap") !== "off",
-    lineNumbers: localStorage.getItem("text-editor-gutter") !== "off",
-  };
-}
-
 function saveSettings(): void {
-  localStorage.setItem("text-editor-font", String(settings.fontSize));
-  localStorage.setItem("text-editor-wrap", settings.wordWrap ? "on" : "off");
-  localStorage.setItem("text-editor-gutter", settings.lineNumbers ? "on" : "off");
-}
-
-function loadChrome(): ChromeSettings {
-  return {
-    showTabs: localStorage.getItem("text-editor-show-tabs") !== "off",
-    showStatusBar: localStorage.getItem("text-editor-show-status") !== "off",
-  };
+  writeEditorSettings(localStorage, settings);
 }
 
 function saveChrome(): void {
-  localStorage.setItem("text-editor-show-tabs", chrome.showTabs ? "on" : "off");
-  localStorage.setItem("text-editor-show-status", chrome.showStatusBar ? "on" : "off");
+  writeChromeSettings(localStorage, chrome);
 }
 
 function activeTab(): Tab | null {
@@ -428,6 +414,12 @@ function toggleNumbers(): void {
   pushSettings();
 }
 
+function setTabSize(size: number): void {
+  settings.tabSize = size;
+  saveSettings();
+  pushSettings();
+}
+
 function pushSettings(): void {
   for (const tab of tabs) {
     if (view && tab.id === activeId) {
@@ -499,6 +491,18 @@ function menuItems(name: string): MenuItem[] {
     return [
       { label: "Show Tabs", accel: "t", enabled: true, checked: chrome.showTabs, run: toggleShowTabs },
       { label: "Show Status Bar", accel: "s", enabled: true, checked: chrome.showStatusBar, run: toggleShowStatusBar },
+      {
+        label: "Tab Length",
+        accel: "l",
+        enabled: true,
+        children: TAB_SIZE_OPTIONS.map((size) => ({
+          label: String(size),
+          accel: String(size),
+          enabled: true,
+          checked: settings.tabSize === size,
+          run: () => setTabSize(size),
+        })),
+      },
     ];
   }
   return [
@@ -541,6 +545,7 @@ function openMenu(name: string, focusIndex = 0): void {
     if (index === items.length - 1 && name === "File") menu.append(separator());
     if (name === "Edit" && (item.label === "Cut" || item.label === "Find" || item.label === "Select All")) menu.append(separator());
     if (name === "View" && item.label === "Zoom In") menu.append(separator());
+    if (name === "Settings" && item.label === "Tab Length") menu.append(separator());
     menu.append(menuButton(item));
   });
   document.body.append(menu);
@@ -737,7 +742,7 @@ function confirmSave(name: string): Promise<"save" | "discard" | "cancel"> {
 
 function showAbout(): Promise<string> {
   const body = document.createElement("p");
-  body.textContent = "Version 0.1.0. A small text editor.";
+  body.textContent = "Version 0.1.1. A small text editor.";
   return openDialog("Text Editor", body, [{ label: "Close", value: "close" }]);
 }
 

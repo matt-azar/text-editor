@@ -190,6 +190,17 @@ button, input { font: inherit; color: inherit; }
 .cm-editor { height: 100%; }
 .cm-editor.cm-focused { outline: none; }
 
+/* WebView2 needs an explicit text selection policy for drag-select. */
+.cm-editor .cm-content,
+.cm-editor .cm-line {
+  user-select: text;
+  -webkit-user-select: text;
+}
+
+.cm-editor .cm-selectionBackground {
+  background-color: #264f78 !important;
+}
+
 .cm-panel.cm-search {
   background: var(--bg);
   color: var(--text);

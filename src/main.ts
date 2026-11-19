@@ -235,8 +235,7 @@ function renderTabs(): void {
 function renderChrome(): void {
   const hasTabs = tabs.length > 0;
   document.body.classList.toggle("zen", zenMode);
-  // Keep the titlebar mounted in Zen so the mark stays a drag handle; CSS hides the rest.
-  titlebarEl.hidden = false;
+  titlebarEl.hidden = zenMode;
   emptyEl.hidden = hasTabs;
   tabsEl.hidden = zenMode || !(hasTabs && chrome.showTabs);
   statusEl.hidden = zenMode || !(hasTabs && chrome.showStatusBar);

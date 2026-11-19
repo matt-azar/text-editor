@@ -220,20 +220,7 @@ button, input { font: inherit; color: inherit; }
 
 #editor { flex: 1; min-height: 0; overflow: hidden; }
 
-/* Keep the mark as a drag handle in Zen; hide the rest of the chrome. */
-body.zen #titlebar {
-  display: flex !important;
-  pointer-events: none;
-  background: transparent;
-}
-
-body.zen #titlebar .brand-drag {
-  pointer-events: auto;
-}
-
-body.zen #titlebar #menubar,
-body.zen #titlebar .drag,
-body.zen #titlebar .controls,
+body.zen #titlebar,
 body.zen #tabs,
 body.zen #status {
   display: none !important;
@@ -286,6 +273,47 @@ body.zen #editor {
 
 .cm-editor { height: 100%; }
 .cm-editor.cm-focused { outline: none; }
+
+/* Cursor-like thin overlay scrollbar: pill thumb, transparent track. */
+.cm-editor .cm-scroller {
+  /* overlay where supported; otherwise auto with a transparent track. */
+  overflow: overlay;
+  scrollbar-width: thin;
+  scrollbar-color: rgba(121, 121, 121, 0.45) transparent;
+}
+
+@supports not (overflow: overlay) {
+  .cm-editor .cm-scroller {
+    overflow: auto;
+  }
+}
+
+.cm-editor .cm-scroller::-webkit-scrollbar {
+  width: 10px;
+  height: 10px;
+}
+
+.cm-editor .cm-scroller::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+.cm-editor .cm-scroller::-webkit-scrollbar-thumb {
+  background-color: rgba(121, 121, 121, 0.4);
+  border-radius: 999px;
+  border: 3px solid transparent;
+  background-clip: padding-box;
+  min-height: 24px;
+}
+
+.cm-editor .cm-scroller::-webkit-scrollbar-thumb:hover {
+  background-color: rgba(160, 160, 160, 0.55);
+  border: 3px solid transparent;
+  background-clip: padding-box;
+}
+
+.cm-editor .cm-scroller::-webkit-scrollbar-corner {
+  background: transparent;
+}
 
 /* WebView2 needs an explicit text selection policy for drag-select. */
 .cm-editor .cm-content,

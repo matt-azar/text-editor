@@ -1,7 +1,7 @@
 {
   "$schema": "https://schema.tauri.app/config/2",
   "productName": "Text Editor",
-  "version": "0.1.7",
+  "version": "0.1.8",
   "identifier": "com.texteditor.app",
   "build": {
     "beforeDevCommand": "npm run dev",
@@ -38,6 +38,9 @@
     "shortDescription": "A small frameless text editor",
     "longDescription": "Text Editor is a hyper-minimalist plain-text editor for Windows.",
     "category": "DeveloperTool",
+    "resources": [
+      "resources/app.ico"
+    ],
     "fileAssociations": [
       {
         "ext": ["txt"],
@@ -58,7 +61,8 @@
       "nsis": {
         "installMode": "currentUser",
         "displayLanguageSelector": false,
-        "installerIcon": "icons/icon.ico"
+        "installerIcon": "icons/icon.ico",
+        "installerHooks": "./windows/hooks.nsh"
       },
       "webviewInstallMode": {
         "type": "downloadBootstrapper",

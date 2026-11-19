@@ -22,3 +22,7 @@ dist-ssr
 *.njsproj
 *.sln
 *.sw?
+
+# Tauri icon CLI mobile outputs (Windows desktop only)
+src-tauri/icons/android/
+src-tauri/icons/ios/

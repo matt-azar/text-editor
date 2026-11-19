@@ -220,20 +220,7 @@ button, input { font: inherit; color: inherit; }
 
 #editor { flex: 1; min-height: 0; overflow: hidden; }
 
-/* Keep the mark as a drag handle in Zen; hide the rest of the chrome. */
-body.zen #titlebar {
-  display: flex !important;
-  pointer-events: none;
-  background: transparent;
-}
-
-body.zen #titlebar .brand-drag {
-  pointer-events: auto;
-}
-
-body.zen #titlebar #menubar,
-body.zen #titlebar .drag,
-body.zen #titlebar .controls,
+body.zen #titlebar,
 body.zen #tabs,
 body.zen #status {
   display: none !important;

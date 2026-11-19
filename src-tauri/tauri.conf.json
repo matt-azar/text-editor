@@ -35,6 +35,9 @@
   "bundle": {
     "active": true,
     "targets": ["nsis"],
+    "shortDescription": "A small frameless text editor",
+    "longDescription": "Text Editor is a hyper-minimalist plain-text editor for Windows.",
+    "category": "DeveloperTool",
     "fileAssociations": [
       {
         "ext": ["txt"],
@@ -51,6 +54,16 @@
         "role": "Editor"
       }
     ],
+    "windows": {
+      "nsis": {
+        "installMode": "currentUser",
+        "displayLanguageSelector": false
+      },
+      "webviewInstallMode": {
+        "type": "downloadBootstrapper",
+        "silent": true
+      }
+    },
     "icon": [
       "icons/32x32.png",
       "icons/128x128.png",

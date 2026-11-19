@@ -2,6 +2,12 @@
 
 A small frameless text editor for Windows, built with Tauri 2 and CodeMirror 6.
 
+## Download
+
+**[Windows installer (v0.1.0)](https://cursor.com/codebase/matt-azar/text-editor/raw/v0.1.0/releases/Text-Editor_0.1.0_x64-setup.exe)** — `Text-Editor_0.1.0_x64-setup.exe`
+
+Tagged release: [`v0.1.0`](https://cursor.com/codebase/matt-azar/text-editor/tree/v0.1.0). The NSIS setup registers `.txt` and `.md` and will download WebView2 on Windows 10 if needed.
+
 ## Develop
 
 Install [Rust 1.85+](https://rustup.rs/) and Node 22, then:
@@ -21,4 +27,14 @@ npm run build
 cargo test --manifest-path src-tauri/Cargo.toml
 ```
 
-`npm run tauri build` produces an NSIS installer and registers `.txt` and `.md` files.
+## Windows installer
+
+`npm run tauri build -- --bundles nsis` on Windows produces the NSIS setup under `src-tauri/target/release/bundle/nsis/`.
+
+From Linux, cross-build with:
+
+```
+npm run tauri build -- --runner cargo-xwin --target x86_64-pc-windows-msvc --bundles nsis
+```
+
+Pushing a `v*` tag (or running the **Windows release** workflow) builds on `windows-latest` and attaches the installer to a GitHub Release when this repository is mirrored to GitHub.

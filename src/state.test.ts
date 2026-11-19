@@ -5,6 +5,7 @@ import {
   isDirty,
   nextTabIndex,
   nextUntitled,
+  normalizeCursorWidth,
   normalizeEditorSettings,
   normalizeTabSize,
   pushRecent,
@@ -87,6 +88,14 @@ test("normalizeTabSize only allows 2, 4, or 8", () => {
   assert.equal(normalizeTabSize("nope"), 4);
 });
 
+test("normalizeCursorWidth only allows 1, 2, or 3", () => {
+  assert.equal(normalizeCursorWidth(1), 1);
+  assert.equal(normalizeCursorWidth(2), 2);
+  assert.equal(normalizeCursorWidth(3), 3);
+  assert.equal(normalizeCursorWidth(4), 2);
+  assert.equal(normalizeCursorWidth("nope"), 2);
+});
+
 test("normalizeEditorSettings fills defaults", () => {
   assert.deepEqual(normalizeEditorSettings({}), {
     fontSize: 14,
@@ -94,11 +103,15 @@ test("normalizeEditorSettings fills defaults", () => {
     lineNumbers: true,
     tabSize: 4,
     highlightCurrentLine: true,
+    cursorBlink: true,
+    cursorWidth: 2,
   });
   assert.equal(normalizeEditorSettings({ fontSize: 18, wordWrap: false, tabSize: 2 }).fontSize, 18);
   assert.equal(normalizeEditorSettings({ fontSize: 18, wordWrap: false, tabSize: 2 }).wordWrap, false);
   assert.equal(normalizeEditorSettings({ fontSize: 18, wordWrap: false, tabSize: 2 }).tabSize, 2);
   assert.equal(normalizeEditorSettings({ highlightCurrentLine: false }).highlightCurrentLine, false);
+  assert.equal(normalizeEditorSettings({ cursorBlink: false }).cursorBlink, false);
+  assert.equal(normalizeEditorSettings({ cursorWidth: 3 }).cursorWidth, 3);
 });
 
 test("editor settings round-trip through storage", () => {
@@ -109,6 +122,8 @@ test("editor settings round-trip through storage", () => {
     lineNumbers: false,
     tabSize: 2,
     highlightCurrentLine: false,
+    cursorBlink: false,
+    cursorWidth: 3,
   });
   assert.deepEqual(readEditorSettings(storage), {
     fontSize: 16,
@@ -116,6 +131,8 @@ test("editor settings round-trip through storage", () => {
     lineNumbers: false,
     tabSize: 2,
     highlightCurrentLine: false,
+    cursorBlink: false,
+    cursorWidth: 3,
   });
 });
 
@@ -126,12 +143,16 @@ test("editor settings migrate legacy localStorage keys", () => {
   storage.setItem("text-editor-gutter", "off");
   storage.setItem("text-editor-tab-size", "8");
   storage.setItem("text-editor-active-line", "off");
+  storage.setItem("text-editor-cursor-blink", "off");
+  storage.setItem("text-editor-cursor-width", "1");
   assert.deepEqual(readEditorSettings(storage), {
     fontSize: 18,
     wordWrap: false,
     lineNumbers: false,
     tabSize: 8,
     highlightCurrentLine: false,
+    cursorBlink: false,
+    cursorWidth: 1,
   });
 });
 

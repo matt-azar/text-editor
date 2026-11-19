@@ -816,7 +816,7 @@ function confirmSave(name: string): Promise<"save" | "discard" | "cancel"> {
 
 function showAbout(): Promise<string> {
   const body = document.createElement("p");
-  body.textContent = "Version 0.1.7. A small text editor.";
+  body.textContent = "Version 0.1.8. A small text editor.";
   return openDialog("Text Editor", body, [{ label: "Close", value: "close" }]);
 }
 

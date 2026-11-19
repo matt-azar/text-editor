@@ -82,6 +82,7 @@ const SHORTCUTS: { label: string; keys: string[] }[] = [
 const HELP_SHORTCUTS: { label: string; keys: string[] }[] = [
   ...SHORTCUTS,
   { label: "Save As", keys: ["Ctrl", "Shift", "S"] },
+  { label: "Exit", keys: ["Ctrl", "Shift", "W"] },
   { label: "Replace", keys: ["Ctrl", "H"] },
   { label: "Undo", keys: ["Ctrl", "Z"] },
   { label: "Redo", keys: ["Ctrl", "Y"] },
@@ -421,6 +422,7 @@ async function exitApp(): Promise<void> {
   await getCurrentWindow().destroy();
 }
 
+
 function zoom(delta: number): void {
   settings.fontSize = delta === 0 ? 14 : Math.min(32, Math.max(10, settings.fontSize + delta));
   saveSettings();
@@ -499,7 +501,7 @@ function menuItems(name: string): MenuItem[] {
       { label: "Save", accel: "s", shortcut: "Ctrl+S", enabled: hasTab, run: () => saveActive(false) },
       { label: "Save As…", accel: "a", shortcut: "Ctrl+Shift+S", enabled: hasTab, run: () => saveActive(true) },
       { label: "Close", accel: "c", shortcut: "Ctrl+W", enabled: hasTab, run: () => { const tab = activeTab(); if (tab) return closeTab(tab); } },
-      { label: "Exit", accel: "x", enabled: true, run: () => exitApp() },
+      { label: "Exit", accel: "x", shortcut: "Ctrl+Shift+W", enabled: true, run: () => exitApp() },
     ];
   }
   if (name === "Edit") {
@@ -814,7 +816,7 @@ function confirmSave(name: string): Promise<"save" | "discard" | "cancel"> {
 
 function showAbout(): Promise<string> {
   const body = document.createElement("p");
-  body.textContent = "Version 0.1.5. A small text editor.";
+  body.textContent = "Version 0.1.6. A small text editor.";
   return openDialog("Text Editor", body, [{ label: "Close", value: "close" }]);
 }
 
@@ -907,7 +909,10 @@ function onKeyDown(event: KeyboardEvent): void {
   } else if (mod && !event.shiftKey && key === "s") {
     event.preventDefault();
     void saveActive(false);
-  } else if (mod && !event.altKey && key === "w") {
+  } else if (mod && event.shiftKey && !event.altKey && key === "w") {
+    event.preventDefault();
+    void exitApp();
+  } else if (mod && !event.shiftKey && !event.altKey && key === "w") {
     event.preventDefault();
     const tab = activeTab();
     if (tab) void closeTab(tab);

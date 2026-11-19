@@ -3,58 +3,38 @@
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <title>Text Editor — Installer</title>
+  <title>Text Editor — Download</title>
   <style>
     :root { color-scheme: dark; font-family: "Segoe UI", sans-serif; }
     body { margin: 0; min-height: 100vh; display: grid; place-items: center; background: #181818; color: #c8c8c8; }
-    main { text-align: left; max-width: 34rem; padding: 2rem; }
-    h1 { font-size: 1.5rem; font-weight: 600; margin: 0 0 .5rem; color: #eee; text-align: center; }
-    p { margin: 0 0 1rem; color: #8f8f8f; line-height: 1.45; }
-    .lead { text-align: center; }
+    main { text-align: center; max-width: 32rem; padding: 2rem; }
+    h1 { font-size: 1.5rem; font-weight: 600; margin: 0 0 .5rem; color: #eee; }
+    p { margin: 0 0 1.25rem; color: #8f8f8f; line-height: 1.45; }
     a.button {
-      display: block; text-align: center; background: #2a2a2a; color: #eee; text-decoration: none;
-      padding: .7rem 1.1rem; border-radius: 6px; font-size: .95rem; margin: 1.25rem 0 .75rem;
+      display: inline-block; background: #2a2a2a; color: #eee; text-decoration: none;
+      padding: .7rem 1.1rem; border-radius: 6px; font-size: .95rem;
     }
     a.button:hover { background: #333; }
-    .meta { margin-top: .75rem; font-size: .8rem; color: #6e6e6e; }
-    .hash, .steps {
-      margin-top: 1rem; background: #222; border-radius: 6px;
-      padding: .75rem .9rem; font-size: .75rem; line-height: 1.45; color: #b0b0b0;
+    .meta { margin-top: 1rem; font-size: .8rem; color: #6e6e6e; }
+    .hash {
+      margin-top: 1.25rem; text-align: left; background: #222; border-radius: 6px;
+      padding: .75rem .9rem; font-size: .75rem; line-height: 1.4; word-break: break-all;
+      color: #b0b0b0;
     }
-    .hash { word-break: break-all; }
-    .hash strong, .steps strong { display: block; color: #ddd; font-size: .8rem; margin-bottom: .35rem; }
-    .steps ol { margin: .35rem 0 0; padding-left: 1.2rem; }
-    .steps li { margin: .35rem 0; }
+    .hash strong { display: block; color: #ddd; font-size: .8rem; margin-bottom: .35rem; }
     code { font-family: Consolas, "Cascadia Mono", monospace; color: #e0e0e0; }
   </style>
 </head>
 <body>
   <main>
     <h1>Text Editor</h1>
-<<<<<<< HEAD
     <p>Windows x64 NSIS installer for version 0.1.8.</p>
     <a class="button" href="./Text-Editor_0.1.8_x64-setup.exe" download>Download Text-Editor_0.1.8_x64-setup.exe</a>
     <p class="meta">About 1.96&nbsp;MB · Unsigned cross-build · WebView2 required</p>
-=======
-    <p class="lead">Windows x64 NSIS installer <strong style="color:#ccc">v0.1.8</strong> — capital-M shortcut/taskbar icon fix (BMP/DIB icons).</p>
-
-    <div class="steps">
-      <strong>Verify before installing</strong>
-      <ol>
-        <li>Download only from this page.</li>
-        <li>Confirm the SHA-256 below matches the file on disk.</li>
-        <li>This build carries an Authenticode signature (project certificate) with a DigiCert timestamp. Windows may still warn if that certificate is not in a public trust store — treat a matching SHA-256 as the integrity check.</li>
-      </ol>
-    </div>
-
-    <a class="button" href="./Text-Editor_0.1.8_x64-setup.exe" download="Text-Editor_0.1.8_x64-setup.exe">Get Text-Editor_0.1.8_x64-setup.exe</a>
-    <p class="meta lead">About 1.96&nbsp;MB · Authenticode + timestamp · WebView2 on Windows 10</p>
-
->>>>>>> ccfe486f1b245b855e5d172f519b9765fc6aebe3
     <div class="hash">
       <strong>SHA-256</strong>
-      <code>1a545cd1f72a0b92aa0f23bee6eb95a737d677469beceb053b07b838c3d112c0</code>
-      <p class="meta" style="margin: .6rem 0 0">PowerShell: <code>Get-FileHash .\Text-Editor_0.1.8_x64-setup.exe -Algorithm SHA256</code></p>
+      <code>66821bb1c64c91153c995e50deee7884817cbd8a523b6e0cfbb22c38958b0e88</code>
+      <p class="meta" style="margin: .6rem 0 0">Verify after download: <code>Get-FileHash .\Text-Editor_0.1.8_x64-setup.exe -Algorithm SHA256</code></p>
     </div>
   </main>
 </body>

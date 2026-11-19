@@ -1,5 +1,5 @@
 import { defaultKeymap, history, historyKeymap, indentWithTab, redo, selectAll, undo } from "@codemirror/commands";
-import { bracketMatching } from "@codemirror/language";
+import { bracketMatching, indentUnit } from "@codemirror/language";
 import { highlightSelectionMatches, openSearchPanel, search, searchKeymap } from "@codemirror/search";
 import { Compartment, EditorSelection, EditorState, type Extension } from "@codemirror/state";
 import {
@@ -10,16 +10,14 @@ import {
   keymap,
   lineNumbers,
 } from "@codemirror/view";
+import { normalizeTabSize, type StoredEditorSettings } from "./state.ts";
 
-export type EditorSettings = {
-  fontSize: number;
-  wordWrap: boolean;
-  lineNumbers: boolean;
-};
+export type EditorSettings = StoredEditorSettings;
 
 const fontComp = new Compartment();
 const wrapComp = new Compartment();
 const gutterComp = new Compartment();
+const indentComp = new Compartment();
 
 const chrome = EditorView.theme(
   {
@@ -35,14 +33,23 @@ const chrome = EditorView.theme(
     ".cm-content": {
       caretColor: "#aeafad",
       padding: "8px 0",
+      userSelect: "text",
+      "-webkit-user-select": "text",
+    },
+    ".cm-line": {
+      userSelect: "text",
+      "-webkit-user-select": "text",
     },
     ".cm-cursor, .cm-dropCursor": {
       borderLeftColor: "#aeafad",
     },
     "&.cm-focused > .cm-scroller > .cm-selectionLayer .cm-selectionBackground, .cm-selectionBackground, .cm-content ::selection":
       {
-        backgroundColor: "#264f78",
+        backgroundColor: "#264f78 !important",
       },
+    ".cm-selectionLayer .cm-selectionBackground": {
+      backgroundColor: "#264f78 !important",
+    },
     ".cm-gutters": {
       backgroundColor: "#181818",
       color: "#6e6e6e",
@@ -61,11 +68,17 @@ function fontTheme(px: number): Extension {
   });
 }
 
+function indentExtensions(tabSize: number): Extension[] {
+  const size = normalizeTabSize(tabSize);
+  return [EditorState.tabSize.of(size), indentUnit.of(" ".repeat(size))];
+}
+
 function settingEffects(settings: EditorSettings) {
   return [
     fontComp.reconfigure(fontTheme(settings.fontSize)),
     wrapComp.reconfigure(settings.wordWrap ? EditorView.lineWrapping : []),
     gutterComp.reconfigure(settings.lineNumbers ? lineNumbers() : []),
+    indentComp.reconfigure(indentExtensions(settings.tabSize)),
   ];
 }
 
@@ -76,15 +89,17 @@ export function createDocument(text: string, settings: EditorSettings, onUpdate:
       fontComp.of(fontTheme(settings.fontSize)),
       wrapComp.of(settings.wordWrap ? EditorView.lineWrapping : []),
       gutterComp.of(settings.lineNumbers ? lineNumbers() : []),
+      indentComp.of(indentExtensions(settings.tabSize)),
       highlightActiveLine(),
       highlightActiveLineGutter(),
       history(),
-      drawSelection(),
+      drawSelection({ cursorBlinkRate: 1200 }),
+      EditorView.editable.of(true),
       bracketMatching(),
       highlightSelectionMatches(),
       search({ top: true }),
       chrome,
-      EditorView.contentAttributes.of({ spellcheck: "false" }),
+      EditorView.contentAttributes.of({ spellcheck: "false", "data-enable-grammarcheck": "false" }),
       keymap.of([
         { key: "Mod-y", run: redo, preventDefault: true },
         { key: "Mod-h", run: openReplace, preventDefault: true },

@@ -26,3 +26,8 @@ dist-ssr
 # Tauri icon CLI mobile outputs (Windows desktop only)
 src-tauri/icons/android/
 src-tauri/icons/ios/
+
+# local code-signing material
+/tmp/
+*.pem
+

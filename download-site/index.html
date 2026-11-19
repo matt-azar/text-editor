@@ -7,7 +7,7 @@
   <style>
     :root { color-scheme: dark; font-family: "Segoe UI", sans-serif; }
     body { margin: 0; min-height: 100vh; display: grid; place-items: center; background: #181818; color: #c8c8c8; }
-    main { text-align: center; max-width: 28rem; padding: 2rem; }
+    main { text-align: center; max-width: 32rem; padding: 2rem; }
     h1 { font-size: 1.5rem; font-weight: 600; margin: 0 0 .5rem; color: #eee; }
     p { margin: 0 0 1.25rem; color: #8f8f8f; line-height: 1.45; }
     a.button {
@@ -16,6 +16,13 @@
     }
     a.button:hover { background: #333; }
     .meta { margin-top: 1rem; font-size: .8rem; color: #6e6e6e; }
+    .hash {
+      margin-top: 1.25rem; text-align: left; background: #222; border-radius: 6px;
+      padding: .75rem .9rem; font-size: .75rem; line-height: 1.4; word-break: break-all;
+      color: #b0b0b0;
+    }
+    .hash strong { display: block; color: #ddd; font-size: .8rem; margin-bottom: .35rem; }
+    code { font-family: Consolas, "Cascadia Mono", monospace; color: #e0e0e0; }
   </style>
 </head>
 <body>
@@ -24,6 +31,11 @@
     <p>Windows x64 NSIS installer for version 0.1.6 (Ctrl+Shift+W exits, Open Recent, capital-M mark).</p>
     <a class="button" href="./Text-Editor_0.1.6_x64-setup.exe" download>Download Text-Editor_0.1.6_x64-setup.exe</a>
     <p class="meta">About 1.6&nbsp;MB · Unsigned cross-build · WebView2 required</p>
+    <div class="hash">
+      <strong>SHA-256</strong>
+      <code>4ade01606279b1ce12ac37c627f9792fbba497ee1eef640efdc4e54f0e65b46b</code>
+      <p class="meta" style="margin: .6rem 0 0">Verify after download: <code>Get-FileHash .\Text-Editor_0.1.6_x64-setup.exe -Algorithm SHA256</code></p>
+    </div>
   </main>
 </body>
 </html>

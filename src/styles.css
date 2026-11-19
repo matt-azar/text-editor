@@ -247,7 +247,7 @@ body.zen #editor {
   top: 0;
   left: 0;
   right: 0;
-  height: 10px;
+  height: 12px;
 }
 
 .zen-edge.bottom {
@@ -264,12 +264,13 @@ body.zen #editor {
   width: 8px;
 }
 
-.zen-edge.right {
+/* Hide the right edge for now so the scrollbar is reachable. */
+/* .zen-edge.right {
   top: 10px;
   bottom: 8px;
   right: 0;
   width: 8px;
-}
+} */
 
 .cm-editor { height: 100%; }
 .cm-editor.cm-focused { outline: none; }

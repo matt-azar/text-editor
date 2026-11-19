@@ -37,6 +37,7 @@ import {
   nextUntitled,
   readChromeSettings,
   readEditorSettings,
+  CURSOR_WIDTH_OPTIONS,
   TAB_SIZE_OPTIONS,
   windowTitle,
   writeChromeSettings,
@@ -436,6 +437,18 @@ function toggleHighlightCurrentLine(): void {
   pushSettings();
 }
 
+function toggleCursorBlink(): void {
+  settings.cursorBlink = !settings.cursorBlink;
+  saveSettings();
+  pushSettings();
+}
+
+function setCursorWidth(width: number): void {
+  settings.cursorWidth = width;
+  saveSettings();
+  pushSettings();
+}
+
 function setTabSize(size: number): void {
   settings.tabSize = size;
   saveSettings();
@@ -529,6 +542,25 @@ function menuItems(name: string): MenuItem[] {
         run: toggleHighlightCurrentLine,
       },
       {
+        label: "Cursor Blink",
+        accel: "b",
+        enabled: true,
+        checked: settings.cursorBlink,
+        run: toggleCursorBlink,
+      },
+      {
+        label: "Cursor Width",
+        accel: "w",
+        enabled: true,
+        children: CURSOR_WIDTH_OPTIONS.map((width) => ({
+          label: `${width} px`,
+          accel: String(width),
+          enabled: true,
+          checked: settings.cursorWidth === width,
+          run: () => setCursorWidth(width),
+        })),
+      },
+      {
         label: "Tab Length",
         accel: "l",
         enabled: true,
@@ -582,7 +614,12 @@ function openMenu(name: string, focusIndex = 0): void {
     if (index === items.length - 1 && name === "File") menu.append(separator());
     if (name === "Edit" && (item.label === "Cut" || item.label === "Find" || item.label === "Select All")) menu.append(separator());
     if (name === "View" && (item.label === "Zen Mode" || item.label === "Zoom In")) menu.append(separator());
-    if (name === "Settings" && (item.label === "Highlight Current Line" || item.label === "Tab Length")) menu.append(separator());
+    if (
+      name === "Settings" &&
+      (item.label === "Highlight Current Line" || item.label === "Cursor Blink" || item.label === "Tab Length")
+    ) {
+      menu.append(separator());
+    }
     menu.append(menuButton(item));
   });
   document.body.append(menu);

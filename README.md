@@ -6,7 +6,7 @@ A small frameless text editor for Windows, built with Tauri 2 and CodeMirror 6.
 
 **[Windows installer (v0.1.4)](https://text-editor-download.apps.grok.bot/Text-Editor_0.1.4_x64-setup.exe)** — `Text-Editor_0.1.4_x64-setup.exe` (~1.62&nbsp;MB)
 
-Includes the capital-M app mark (shortcut and window icons), same-line selection polish, current-line highlight toggle, Settings, and Zen Mode (`Ctrl+Shift+Z`) with edge drag. Download page: https://text-editor-download.apps.grok.bot. Origin blob/raw URLs cannot serve this ~1.6&nbsp;MB binary (API: file too large; UI 404). The NSIS setup registers `.txt` and `.md` and will download WebView2 on Windows 10 if needed.
+Includes the capital-M app mark (shortcut and window icons), same-line selection polish, current-line highlight toggle, cursor blink/width settings, and Zen Mode (`Ctrl+Shift+Z`) with edge drag. Download page: https://text-editor-download.apps.grok.bot. Origin blob/raw URLs cannot serve this ~1.6&nbsp;MB binary (API: file too large; UI 404). The NSIS setup registers `.txt` and `.md` and will download WebView2 on Windows 10 if needed.
 
 ## Develop
 

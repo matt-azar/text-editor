@@ -6,6 +6,8 @@ export type StoredEditorSettings = {
   lineNumbers: boolean;
   tabSize: number;
   highlightCurrentLine: boolean;
+  cursorBlink: boolean;
+  cursorWidth: number;
 };
 
 export type StoredChromeSettings = {
@@ -19,6 +21,8 @@ export const DEFAULT_EDITOR_SETTINGS: StoredEditorSettings = {
   lineNumbers: true,
   tabSize: 4,
   highlightCurrentLine: true,
+  cursorBlink: true,
+  cursorWidth: 2,
 };
 
 export const DEFAULT_CHROME_SETTINGS: StoredChromeSettings = {
@@ -27,10 +31,19 @@ export const DEFAULT_CHROME_SETTINGS: StoredChromeSettings = {
 };
 
 export const TAB_SIZE_OPTIONS = [2, 4, 8] as const;
+/** Line caret widths in CSS pixels — 2 matches VS Code / Cursor’s thicker default feel. */
+export const CURSOR_WIDTH_OPTIONS = [1, 2, 3] as const;
 
 export function normalizeTabSize(value: unknown): number {
   const size = typeof value === "number" ? value : Number(value);
   return TAB_SIZE_OPTIONS.includes(size as (typeof TAB_SIZE_OPTIONS)[number]) ? size : DEFAULT_EDITOR_SETTINGS.tabSize;
+}
+
+export function normalizeCursorWidth(value: unknown): number {
+  const width = typeof value === "number" ? value : Number(value);
+  return CURSOR_WIDTH_OPTIONS.includes(width as (typeof CURSOR_WIDTH_OPTIONS)[number])
+    ? width
+    : DEFAULT_EDITOR_SETTINGS.cursorWidth;
 }
 
 export function normalizeEditorSettings(raw: Partial<StoredEditorSettings> | null | undefined): StoredEditorSettings {
@@ -41,6 +54,8 @@ export function normalizeEditorSettings(raw: Partial<StoredEditorSettings> | nul
     lineNumbers: raw?.lineNumbers !== false,
     tabSize: normalizeTabSize(raw?.tabSize),
     highlightCurrentLine: raw?.highlightCurrentLine !== false,
+    cursorBlink: raw?.cursorBlink !== false,
+    cursorWidth: normalizeCursorWidth(raw?.cursorWidth),
   };
 }
 
@@ -67,6 +82,8 @@ export function readEditorSettings(storage: Storage): StoredEditorSettings {
     lineNumbers: storage.getItem("text-editor-gutter") !== "off",
     tabSize: Number(storage.getItem("text-editor-tab-size")),
     highlightCurrentLine: storage.getItem("text-editor-active-line") !== "off",
+    cursorBlink: storage.getItem("text-editor-cursor-blink") !== "off",
+    cursorWidth: Number(storage.getItem("text-editor-cursor-width")),
   });
 }
 
@@ -78,6 +95,8 @@ export function writeEditorSettings(storage: Storage, settings: StoredEditorSett
   storage.setItem("text-editor-gutter", settings.lineNumbers ? "on" : "off");
   storage.setItem("text-editor-tab-size", String(settings.tabSize));
   storage.setItem("text-editor-active-line", settings.highlightCurrentLine ? "on" : "off");
+  storage.setItem("text-editor-cursor-blink", settings.cursorBlink ? "on" : "off");
+  storage.setItem("text-editor-cursor-width", String(settings.cursorWidth));
 }
 
 export function readChromeSettings(storage: Storage): StoredChromeSettings {

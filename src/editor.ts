@@ -10,7 +10,7 @@ import {
   keymap,
   lineNumbers,
 } from "@codemirror/view";
-import { normalizeTabSize, type StoredEditorSettings } from "./state.ts";
+import { normalizeCursorWidth, normalizeTabSize, type StoredEditorSettings } from "./state.ts";
 
 export type EditorSettings = StoredEditorSettings;
 
@@ -19,6 +19,7 @@ const wrapComp = new Compartment();
 const gutterComp = new Compartment();
 const indentComp = new Compartment();
 const activeLineComp = new Compartment();
+const cursorComp = new Compartment();
 
 const chrome = EditorView.theme(
   {
@@ -40,9 +41,6 @@ const chrome = EditorView.theme(
     ".cm-line": {
       userSelect: "text",
       "-webkit-user-select": "text",
-    },
-    ".cm-cursor, .cm-dropCursor": {
-      borderLeftColor: "#aeafad",
     },
     // Selection is drawn in a layer behind line backgrounds; keep this strong
     // and keep active-line paint translucent so same-line ranges stay visible.
@@ -80,6 +78,28 @@ function activeLineExtensions(enabled: boolean): Extension[] {
   return enabled ? [highlightActiveLine(), highlightActiveLineGutter()] : [];
 }
 
+function cursorExtensions(blink: boolean, width: number): Extension[] {
+  const cursorWidth = normalizeCursorWidth(width);
+  const cursorTheme: Record<string, Record<string, string>> = {
+    ".cm-cursor, .cm-dropCursor": {
+      borderLeftWidth: `${cursorWidth}px`,
+      marginLeft: `${-(cursorWidth / 2)}px`,
+      borderLeftColor: "#aeafad",
+    },
+  };
+  if (!blink) {
+    // cursorBlinkRate: 0 alone can still leave a zero-duration animation flickering.
+    cursorTheme["&.cm-focused > .cm-scroller > .cm-cursorLayer"] = {
+      animationName: "none",
+      animationDuration: "0s",
+    };
+  }
+  return [
+    drawSelection({ cursorBlinkRate: blink ? 1200 : 0 }),
+    EditorView.theme(cursorTheme),
+  ];
+}
+
 function settingEffects(settings: EditorSettings) {
   return [
     fontComp.reconfigure(fontTheme(settings.fontSize)),
@@ -87,6 +107,7 @@ function settingEffects(settings: EditorSettings) {
     gutterComp.reconfigure(settings.lineNumbers ? lineNumbers() : []),
     indentComp.reconfigure(indentExtensions(settings.tabSize)),
     activeLineComp.reconfigure(activeLineExtensions(settings.highlightCurrentLine)),
+    cursorComp.reconfigure(cursorExtensions(settings.cursorBlink, settings.cursorWidth)),
   ];
 }
 
@@ -99,8 +120,8 @@ export function createDocument(text: string, settings: EditorSettings, onUpdate:
       gutterComp.of(settings.lineNumbers ? lineNumbers() : []),
       indentComp.of(indentExtensions(settings.tabSize)),
       activeLineComp.of(activeLineExtensions(settings.highlightCurrentLine)),
+      cursorComp.of(cursorExtensions(settings.cursorBlink, settings.cursorWidth)),
       history(),
-      drawSelection({ cursorBlinkRate: 1200 }),
       EditorView.editable.of(true),
       bracketMatching(),
       highlightSelectionMatches(),

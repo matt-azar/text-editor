@@ -197,6 +197,47 @@ body.zen #editor {
   flex: 1;
 }
 
+/* Thin border strips so Zen Mode can still move the frameless window. */
+#zen-drag {
+  position: fixed;
+  inset: 0;
+  z-index: 50;
+  pointer-events: none;
+}
+
+.zen-edge {
+  position: absolute;
+  pointer-events: auto;
+}
+
+.zen-edge.top {
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 10px;
+}
+
+.zen-edge.bottom {
+  bottom: 0;
+  left: 0;
+  right: 0;
+  height: 8px;
+}
+
+.zen-edge.left {
+  top: 10px;
+  bottom: 8px;
+  left: 0;
+  width: 8px;
+}
+
+.zen-edge.right {
+  top: 10px;
+  bottom: 8px;
+  right: 0;
+  width: 8px;
+}
+
 .cm-editor { height: 100%; }
 .cm-editor.cm-focused { outline: none; }
 
@@ -207,6 +248,7 @@ body.zen #editor {
   -webkit-user-select: text;
 }
 
+.cm-editor .cm-selectionLayer .cm-selectionBackground,
 .cm-editor .cm-selectionBackground {
   background-color: #264f78 !important;
 }

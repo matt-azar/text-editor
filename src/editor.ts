@@ -18,6 +18,7 @@ const fontComp = new Compartment();
 const wrapComp = new Compartment();
 const gutterComp = new Compartment();
 const indentComp = new Compartment();
+const activeLineComp = new Compartment();
 
 const chrome = EditorView.theme(
   {
@@ -43,7 +44,9 @@ const chrome = EditorView.theme(
     ".cm-cursor, .cm-dropCursor": {
       borderLeftColor: "#aeafad",
     },
-    "&.cm-focused > .cm-scroller > .cm-selectionLayer .cm-selectionBackground, .cm-selectionBackground, .cm-content ::selection":
+    // Selection is drawn in a layer behind line backgrounds; keep this strong
+    // and keep active-line paint translucent so same-line ranges stay visible.
+    "&.cm-focused > .cm-scroller > .cm-selectionLayer .cm-selectionBackground, .cm-selectionBackground":
       {
         backgroundColor: "#264f78 !important",
       },
@@ -56,7 +59,7 @@ const chrome = EditorView.theme(
       border: "none",
     },
     ".cm-activeLine, .cm-activeLineGutter": {
-      backgroundColor: "#1f1f1f",
+      backgroundColor: "rgba(255, 255, 255, 0.045)",
     },
   },
   { dark: true },
@@ -73,12 +76,17 @@ function indentExtensions(tabSize: number): Extension[] {
   return [EditorState.tabSize.of(size), indentUnit.of(" ".repeat(size))];
 }
 
+function activeLineExtensions(enabled: boolean): Extension[] {
+  return enabled ? [highlightActiveLine(), highlightActiveLineGutter()] : [];
+}
+
 function settingEffects(settings: EditorSettings) {
   return [
     fontComp.reconfigure(fontTheme(settings.fontSize)),
     wrapComp.reconfigure(settings.wordWrap ? EditorView.lineWrapping : []),
     gutterComp.reconfigure(settings.lineNumbers ? lineNumbers() : []),
     indentComp.reconfigure(indentExtensions(settings.tabSize)),
+    activeLineComp.reconfigure(activeLineExtensions(settings.highlightCurrentLine)),
   ];
 }
 
@@ -90,8 +98,7 @@ export function createDocument(text: string, settings: EditorSettings, onUpdate:
       wrapComp.of(settings.wordWrap ? EditorView.lineWrapping : []),
       gutterComp.of(settings.lineNumbers ? lineNumbers() : []),
       indentComp.of(indentExtensions(settings.tabSize)),
-      highlightActiveLine(),
-      highlightActiveLineGutter(),
+      activeLineComp.of(activeLineExtensions(settings.highlightCurrentLine)),
       history(),
       drawSelection({ cursorBlinkRate: 1200 }),
       EditorView.editable.of(true),

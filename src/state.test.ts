@@ -93,10 +93,12 @@ test("normalizeEditorSettings fills defaults", () => {
     wordWrap: true,
     lineNumbers: true,
     tabSize: 4,
+    highlightCurrentLine: true,
   });
   assert.equal(normalizeEditorSettings({ fontSize: 18, wordWrap: false, tabSize: 2 }).fontSize, 18);
   assert.equal(normalizeEditorSettings({ fontSize: 18, wordWrap: false, tabSize: 2 }).wordWrap, false);
   assert.equal(normalizeEditorSettings({ fontSize: 18, wordWrap: false, tabSize: 2 }).tabSize, 2);
+  assert.equal(normalizeEditorSettings({ highlightCurrentLine: false }).highlightCurrentLine, false);
 });
 
 test("editor settings round-trip through storage", () => {
@@ -106,12 +108,14 @@ test("editor settings round-trip through storage", () => {
     wordWrap: false,
     lineNumbers: false,
     tabSize: 2,
+    highlightCurrentLine: false,
   });
   assert.deepEqual(readEditorSettings(storage), {
     fontSize: 16,
     wordWrap: false,
     lineNumbers: false,
     tabSize: 2,
+    highlightCurrentLine: false,
   });
 });
 
@@ -121,11 +125,13 @@ test("editor settings migrate legacy localStorage keys", () => {
   storage.setItem("text-editor-wrap", "off");
   storage.setItem("text-editor-gutter", "off");
   storage.setItem("text-editor-tab-size", "8");
+  storage.setItem("text-editor-active-line", "off");
   assert.deepEqual(readEditorSettings(storage), {
     fontSize: 18,
     wordWrap: false,
     lineNumbers: false,
     tabSize: 8,
+    highlightCurrentLine: false,
   });
 });
 

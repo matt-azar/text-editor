@@ -5,6 +5,7 @@ export type StoredEditorSettings = {
   wordWrap: boolean;
   lineNumbers: boolean;
   tabSize: number;
+  highlightCurrentLine: boolean;
 };
 
 export type StoredChromeSettings = {
@@ -17,6 +18,7 @@ export const DEFAULT_EDITOR_SETTINGS: StoredEditorSettings = {
   wordWrap: true,
   lineNumbers: true,
   tabSize: 4,
+  highlightCurrentLine: true,
 };
 
 export const DEFAULT_CHROME_SETTINGS: StoredChromeSettings = {
@@ -38,6 +40,7 @@ export function normalizeEditorSettings(raw: Partial<StoredEditorSettings> | nul
     wordWrap: raw?.wordWrap !== false,
     lineNumbers: raw?.lineNumbers !== false,
     tabSize: normalizeTabSize(raw?.tabSize),
+    highlightCurrentLine: raw?.highlightCurrentLine !== false,
   };
 }
 
@@ -63,6 +66,7 @@ export function readEditorSettings(storage: Storage): StoredEditorSettings {
     wordWrap: storage.getItem("text-editor-wrap") !== "off",
     lineNumbers: storage.getItem("text-editor-gutter") !== "off",
     tabSize: Number(storage.getItem("text-editor-tab-size")),
+    highlightCurrentLine: storage.getItem("text-editor-active-line") !== "off",
   });
 }
 
@@ -73,6 +77,7 @@ export function writeEditorSettings(storage: Storage, settings: StoredEditorSett
   storage.setItem("text-editor-wrap", settings.wordWrap ? "on" : "off");
   storage.setItem("text-editor-gutter", settings.lineNumbers ? "on" : "off");
   storage.setItem("text-editor-tab-size", String(settings.tabSize));
+  storage.setItem("text-editor-active-line", settings.highlightCurrentLine ? "on" : "off");
 }
 
 export function readChromeSettings(storage: Storage): StoredChromeSettings {

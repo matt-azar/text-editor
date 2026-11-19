@@ -536,13 +536,6 @@ function menuItems(name: string): MenuItem[] {
       { label: "Show Tabs", accel: "t", enabled: true, checked: chrome.showTabs, run: toggleShowTabs },
       { label: "Show Status Bar", accel: "s", enabled: true, checked: chrome.showStatusBar, run: toggleShowStatusBar },
       {
-        label: "Highlight Current Line",
-        accel: "h",
-        enabled: true,
-        checked: settings.highlightCurrentLine,
-        run: toggleHighlightCurrentLine,
-      },
-      {
         label: "Cursor Blink",
         accel: "b",
         enabled: true,
@@ -615,10 +608,7 @@ function openMenu(name: string, focusIndex = 0): void {
     if (index === items.length - 1 && name === "File") menu.append(separator());
     if (name === "Edit" && (item.label === "Cut" || item.label === "Find" || item.label === "Select All")) menu.append(separator());
     if (name === "View" && (item.label === "Zen Mode" || item.label === "Zoom In")) menu.append(separator());
-    if (
-      name === "Settings" &&
-      (item.label === "Highlight Current Line" || item.label === "Cursor Blink" || item.label === "Tab Length")
-    ) {
+    if (name === "Settings" && (item.label === "Cursor Blink" || item.label === "Tab Length")) {
       menu.append(separator());
     }
     menu.append(menuButton(item));

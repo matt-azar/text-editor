@@ -4,11 +4,11 @@ A small frameless text editor for Windows, built with Tauri 2 and CodeMirror 6.
 
 ## Download
 
-**[Windows installer (v0.1.8)](https://text-editor-download.apps.grok.bot/Text-Editor_0.1.8_x64-setup.exe)** — `Text-Editor_0.1.8_x64-setup.exe` (~1.96&nbsp;MB)
+**[Windows installer (v0.1.9)](https://text-editor-download.apps.grok.bot/Text-Editor_0.1.9_x64-setup.exe)** — `Text-Editor_0.1.9_x64-setup.exe` (~1.95&nbsp;MB)
 
-Download page: https://text-editor-download.apps.grok.bot. 
+Download page: https://text-editor-download.apps.grok.bot.
 
-SHA-256: `1a545cd1f72a0b92aa0f23bee6eb95a737d677469beceb053b07b838c3d112c0`.
+SHA-256: `1ad44e81995ee95211d210a67a6a0667d7d80da6491a92a604d883e787bd437b`.
 
 ## Develop
 

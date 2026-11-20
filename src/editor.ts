@@ -10,6 +10,7 @@ import {
   keymap,
   lineNumbers,
 } from "@codemirror/view";
+import { vim } from "@replit/codemirror-vim";
 import { normalizeCursorWidth, normalizeTabSize, type StoredEditorSettings } from "./state.ts";
 
 export type EditorSettings = StoredEditorSettings;
@@ -20,8 +21,10 @@ const gutterComp = new Compartment();
 const indentComp = new Compartment();
 const activeLineComp = new Compartment();
 const cursorComp = new Compartment();
+const themeComp = new Compartment();
+const vimComp = new Compartment();
 
-const chrome = EditorView.theme(
+const darkTheme = EditorView.theme(
   {
     "&": {
       height: "100%",
@@ -42,8 +45,6 @@ const chrome = EditorView.theme(
       userSelect: "text",
       "-webkit-user-select": "text",
     },
-    // Selection is drawn in a layer behind line backgrounds; keep this strong
-    // and keep active-line paint translucent so same-line ranges stay visible.
     "&.cm-focused > .cm-scroller > .cm-selectionLayer .cm-selectionBackground, .cm-selectionBackground":
       {
         backgroundColor: "#264f78 !important",
@@ -63,6 +64,47 @@ const chrome = EditorView.theme(
   { dark: true },
 );
 
+/** Off-white light editor chrome. */
+const lightTheme = EditorView.theme(
+  {
+    "&": {
+      height: "100%",
+      backgroundColor: "#f5f5f5",
+      color: "#1e1e1e",
+    },
+    ".cm-scroller": {
+      fontFamily: '"Cascadia Code", "Cascadia Mono", Consolas, monospace',
+      lineHeight: "1.5",
+    },
+    ".cm-content": {
+      caretColor: "#1e1e1e",
+      padding: "8px 0",
+      userSelect: "text",
+      "-webkit-user-select": "text",
+    },
+    ".cm-line": {
+      userSelect: "text",
+      "-webkit-user-select": "text",
+    },
+    "&.cm-focused > .cm-scroller > .cm-selectionLayer .cm-selectionBackground, .cm-selectionBackground":
+      {
+        backgroundColor: "#add6ff !important",
+      },
+    ".cm-selectionLayer .cm-selectionBackground": {
+      backgroundColor: "#add6ff !important",
+    },
+    ".cm-gutters": {
+      backgroundColor: "#f5f5f5",
+      color: "#8a8a8a",
+      border: "none",
+    },
+    ".cm-activeLine, .cm-activeLineGutter": {
+      backgroundColor: "rgba(0, 0, 0, 0.045)",
+    },
+  },
+  { dark: false },
+);
+
 function fontTheme(px: number): Extension {
   return EditorView.theme({
     "&": { fontSize: `${px}px` },
@@ -78,17 +120,17 @@ function activeLineExtensions(enabled: boolean): Extension[] {
   return enabled ? [highlightActiveLine(), highlightActiveLineGutter()] : [];
 }
 
-function cursorExtensions(blink: boolean, width: number): Extension[] {
-  const cursorWidth = normalizeCursorWidth(width);
+function cursorExtensions(blink: boolean, width: number, thick: boolean, light: boolean): Extension[] {
+  const cursorWidth = thick ? Math.max(normalizeCursorWidth(width), 6) : normalizeCursorWidth(width);
+  const caret = light ? "#1e1e1e" : "#aeafad";
   const cursorTheme: Record<string, Record<string, string>> = {
     ".cm-cursor, .cm-dropCursor": {
       borderLeftWidth: `${cursorWidth}px`,
       marginLeft: `${-(cursorWidth / 2)}px`,
-      borderLeftColor: "#aeafad",
+      borderLeftColor: caret,
     },
   };
   if (!blink) {
-    // cursorBlinkRate: 0 alone can still leave a zero-duration animation flickering.
     cursorTheme["&.cm-focused > .cm-scroller > .cm-cursorLayer"] = {
       animationName: "none",
       animationDuration: "0s",
@@ -100,18 +142,27 @@ function cursorExtensions(blink: boolean, width: number): Extension[] {
   ];
 }
 
-function settingEffects(settings: EditorSettings) {
+function settingEffects(settings: EditorSettings, lightMode: boolean) {
   return [
     fontComp.reconfigure(fontTheme(settings.fontSize)),
     wrapComp.reconfigure(settings.wordWrap ? EditorView.lineWrapping : []),
     gutterComp.reconfigure(settings.lineNumbers ? lineNumbers() : []),
     indentComp.reconfigure(indentExtensions(settings.tabSize)),
     activeLineComp.reconfigure(activeLineExtensions(settings.highlightCurrentLine)),
-    cursorComp.reconfigure(cursorExtensions(settings.cursorBlink, settings.cursorWidth)),
+    cursorComp.reconfigure(
+      cursorExtensions(settings.cursorBlink, settings.cursorWidth, settings.thickCursor, lightMode),
+    ),
+    themeComp.reconfigure(lightMode ? lightTheme : darkTheme),
+    vimComp.reconfigure(settings.vimMode ? vim() : []),
   ];
 }
 
-export function createDocument(text: string, settings: EditorSettings, onUpdate: (state: EditorState) => void): EditorState {
+export function createDocument(
+  text: string,
+  settings: EditorSettings,
+  onUpdate: (state: EditorState) => void,
+  lightMode = false,
+): EditorState {
   return EditorState.create({
     doc: text,
     extensions: [
@@ -120,13 +171,16 @@ export function createDocument(text: string, settings: EditorSettings, onUpdate:
       gutterComp.of(settings.lineNumbers ? lineNumbers() : []),
       indentComp.of(indentExtensions(settings.tabSize)),
       activeLineComp.of(activeLineExtensions(settings.highlightCurrentLine)),
-      cursorComp.of(cursorExtensions(settings.cursorBlink, settings.cursorWidth)),
+      cursorComp.of(
+        cursorExtensions(settings.cursorBlink, settings.cursorWidth, settings.thickCursor, lightMode),
+      ),
+      themeComp.of(lightMode ? lightTheme : darkTheme),
+      vimComp.of(settings.vimMode ? vim() : []),
       history(),
       EditorView.editable.of(true),
       bracketMatching(),
       highlightSelectionMatches(),
       search({ top: true }),
-      chrome,
       EditorView.contentAttributes.of({ spellcheck: "false", "data-enable-grammarcheck": "false" }),
       keymap.of([
         { key: "Mod-y", run: redo, preventDefault: true },
@@ -148,13 +202,13 @@ export function createDocument(text: string, settings: EditorSettings, onUpdate:
   });
 }
 
-export function applySettings(view: EditorView, settings: EditorSettings): EditorState {
-  view.dispatch({ effects: settingEffects(settings) });
+export function applySettings(view: EditorView, settings: EditorSettings, lightMode = false): EditorState {
+  view.dispatch({ effects: settingEffects(settings, lightMode) });
   return view.state;
 }
 
-export function retarget(state: EditorState, settings: EditorSettings): EditorState {
-  return state.update({ effects: settingEffects(settings) }).state;
+export function retarget(state: EditorState, settings: EditorSettings, lightMode = false): EditorState {
+  return state.update({ effects: settingEffects(settings, lightMode) }).state;
 }
 
 export function cursorPosition(state: EditorState): { line: number; column: number } {

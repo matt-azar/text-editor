@@ -8,11 +8,14 @@ export type StoredEditorSettings = {
   highlightCurrentLine: boolean;
   cursorBlink: boolean;
   cursorWidth: number;
+  vimMode: boolean;
+  thickCursor: boolean;
 };
 
 export type StoredChromeSettings = {
   showTabs: boolean;
   showStatusBar: boolean;
+  lightMode: boolean;
 };
 
 export const DEFAULT_EDITOR_SETTINGS: StoredEditorSettings = {
@@ -23,11 +26,14 @@ export const DEFAULT_EDITOR_SETTINGS: StoredEditorSettings = {
   highlightCurrentLine: true,
   cursorBlink: true,
   cursorWidth: 2,
+  vimMode: false,
+  thickCursor: false,
 };
 
 export const DEFAULT_CHROME_SETTINGS: StoredChromeSettings = {
   showTabs: true,
   showStatusBar: true,
+  lightMode: false,
 };
 
 export const TAB_SIZE_OPTIONS = [2, 4, 8] as const;
@@ -56,6 +62,8 @@ export function normalizeEditorSettings(raw: Partial<StoredEditorSettings> | nul
     highlightCurrentLine: raw?.highlightCurrentLine !== false,
     cursorBlink: raw?.cursorBlink !== false,
     cursorWidth: normalizeCursorWidth(raw?.cursorWidth),
+    vimMode: raw?.vimMode === true,
+    thickCursor: raw?.thickCursor === true,
   };
 }
 
@@ -63,6 +71,7 @@ export function normalizeChromeSettings(raw: Partial<StoredChromeSettings> | nul
   return {
     showTabs: raw?.showTabs !== false,
     showStatusBar: raw?.showStatusBar !== false,
+    lightMode: raw?.lightMode === true,
   };
 }
 
@@ -84,6 +93,8 @@ export function readEditorSettings(storage: Storage): StoredEditorSettings {
     highlightCurrentLine: storage.getItem("text-editor-active-line") !== "off",
     cursorBlink: storage.getItem("text-editor-cursor-blink") !== "off",
     cursorWidth: Number(storage.getItem("text-editor-cursor-width")),
+    vimMode: storage.getItem("text-editor-vim") === "on",
+    thickCursor: storage.getItem("text-editor-thick-cursor") === "on",
   });
 }
 
@@ -97,6 +108,8 @@ export function writeEditorSettings(storage: Storage, settings: StoredEditorSett
   storage.setItem("text-editor-active-line", settings.highlightCurrentLine ? "on" : "off");
   storage.setItem("text-editor-cursor-blink", settings.cursorBlink ? "on" : "off");
   storage.setItem("text-editor-cursor-width", String(settings.cursorWidth));
+  storage.setItem("text-editor-vim", settings.vimMode ? "on" : "off");
+  storage.setItem("text-editor-thick-cursor", settings.thickCursor ? "on" : "off");
 }
 
 export function readChromeSettings(storage: Storage): StoredChromeSettings {
@@ -111,6 +124,7 @@ export function readChromeSettings(storage: Storage): StoredChromeSettings {
   return normalizeChromeSettings({
     showTabs: storage.getItem("text-editor-show-tabs") !== "off",
     showStatusBar: storage.getItem("text-editor-show-status") !== "off",
+    lightMode: storage.getItem("text-editor-light") === "on",
   });
 }
 
@@ -118,6 +132,7 @@ export function writeChromeSettings(storage: Storage, chrome: StoredChromeSettin
   storage.setItem("text-editor-chrome", JSON.stringify(normalizeChromeSettings(chrome)));
   storage.setItem("text-editor-show-tabs", chrome.showTabs ? "on" : "off");
   storage.setItem("text-editor-show-status", chrome.showStatusBar ? "on" : "off");
+  storage.setItem("text-editor-light", chrome.lightMode ? "on" : "off");
 }
 
 export function fileName(path: string): string {

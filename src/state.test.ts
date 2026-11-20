@@ -5,6 +5,7 @@ import {
   isDirty,
   nextTabIndex,
   nextUntitled,
+  normalizeChromeSettings,
   normalizeCursorWidth,
   normalizeEditorSettings,
   normalizeTabSize,
@@ -105,6 +106,8 @@ test("normalizeEditorSettings fills defaults", () => {
     highlightCurrentLine: true,
     cursorBlink: true,
     cursorWidth: 2,
+    vimMode: false,
+    thickCursor: false,
   });
   assert.equal(normalizeEditorSettings({ fontSize: 18, wordWrap: false, tabSize: 2 }).fontSize, 18);
   assert.equal(normalizeEditorSettings({ fontSize: 18, wordWrap: false, tabSize: 2 }).wordWrap, false);
@@ -112,6 +115,9 @@ test("normalizeEditorSettings fills defaults", () => {
   assert.equal(normalizeEditorSettings({ highlightCurrentLine: false }).highlightCurrentLine, false);
   assert.equal(normalizeEditorSettings({ cursorBlink: false }).cursorBlink, false);
   assert.equal(normalizeEditorSettings({ cursorWidth: 3 }).cursorWidth, 3);
+  assert.equal(normalizeEditorSettings({ vimMode: true }).vimMode, true);
+  assert.equal(normalizeEditorSettings({ thickCursor: true }).thickCursor, true);
+  assert.equal(normalizeEditorSettings({ vimMode: true }).thickCursor, false);
 });
 
 test("editor settings round-trip through storage", () => {
@@ -124,6 +130,8 @@ test("editor settings round-trip through storage", () => {
     highlightCurrentLine: false,
     cursorBlink: false,
     cursorWidth: 3,
+    vimMode: true,
+    thickCursor: true,
   });
   assert.deepEqual(readEditorSettings(storage), {
     fontSize: 16,
@@ -133,6 +141,8 @@ test("editor settings round-trip through storage", () => {
     highlightCurrentLine: false,
     cursorBlink: false,
     cursorWidth: 3,
+    vimMode: true,
+    thickCursor: true,
   });
 });
 
@@ -145,6 +155,8 @@ test("editor settings migrate legacy localStorage keys", () => {
   storage.setItem("text-editor-active-line", "off");
   storage.setItem("text-editor-cursor-blink", "off");
   storage.setItem("text-editor-cursor-width", "1");
+  storage.setItem("text-editor-vim", "on");
+  storage.setItem("text-editor-thick-cursor", "on");
   assert.deepEqual(readEditorSettings(storage), {
     fontSize: 18,
     wordWrap: false,
@@ -153,11 +165,14 @@ test("editor settings migrate legacy localStorage keys", () => {
     highlightCurrentLine: false,
     cursorBlink: false,
     cursorWidth: 1,
+    vimMode: true,
+    thickCursor: true,
   });
 });
 
 test("chrome settings persist between writes", () => {
   const storage = new MemoryStorage();
-  writeChromeSettings(storage, { showTabs: false, showStatusBar: true });
-  assert.deepEqual(readChromeSettings(storage), { showTabs: false, showStatusBar: true });
+  writeChromeSettings(storage, { showTabs: false, showStatusBar: true, lightMode: true });
+  assert.deepEqual(readChromeSettings(storage), { showTabs: false, showStatusBar: true, lightMode: true });
+  assert.equal(normalizeChromeSettings({}).lightMode, false);
 });

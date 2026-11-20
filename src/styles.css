@@ -2,12 +2,28 @@
   color-scheme: dark;
   --bg: #181818;
   --raised: #2a2a2a;
+  --tab-active: #222;
   --text: #c8c8c8;
   --muted: #8f8f8f;
   --faint: #6e6e6e;
   --line: #2b2b2b;
+  --selection: #264f78;
+  --mark: #d0d0d0;
   --close: #c42b1c;
   font-family: "Segoe UI Variable Text", "Segoe UI", sans-serif;
+}
+
+:root[data-theme="light"] {
+  color-scheme: light;
+  --bg: #f5f5f5;
+  --raised: #e8e8e8;
+  --tab-active: #ececec;
+  --text: #1e1e1e;
+  --muted: #5a5a5a;
+  --faint: #8a8a8a;
+  --line: #d6d6d6;
+  --selection: #add6ff;
+  --mark: #404040;
 }
 
 * { box-sizing: border-box; }
@@ -57,7 +73,7 @@ button, input { font: inherit; color: inherit; }
   width: 16px;
   height: 16px;
   margin: 0;
-  color: #e8e8e8;
+  color: var(--mark);
   pointer-events: none;
 }
 
@@ -132,7 +148,7 @@ button, input { font: inherit; color: inherit; }
 }
 
 .tab.active {
-  background: #222;
+  background: var(--tab-active);
   color: var(--text);
 }
 
@@ -184,7 +200,7 @@ button, input { font: inherit; color: inherit; }
 .mark {
   width: 72px;
   height: 72px;
-  color: #d0d0d0;
+  color: var(--mark);
   pointer-events: none;
 }
 
@@ -207,7 +223,7 @@ button, input { font: inherit; color: inherit; }
 
 .key {
   background: var(--raised);
-  color: #d0d0d0;
+  color: var(--text);
   border-radius: 4px;
   padding: 1px 6px;
   font-size: 12px;
@@ -325,7 +341,7 @@ body.zen #editor {
 
 .cm-editor .cm-selectionLayer .cm-selectionBackground,
 .cm-editor .cm-selectionBackground {
-  background-color: #264f78 !important;
+  background-color: var(--selection) !important;
 }
 
 .cm-panel.cm-search {
@@ -414,7 +430,7 @@ body.zen #editor {
   outline: none;
 }
 
-.menu button:disabled, .flyout button:disabled { color: #5a5a5a; }
+.menu button:disabled, .flyout button:disabled { color: var(--faint); }
 
 .menu .hint, .flyout .hint {
   margin-left: auto;

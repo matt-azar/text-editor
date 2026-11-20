@@ -126,10 +126,15 @@ let zenMode = false;
 type ChromeSettings = {
   showTabs: boolean;
   showStatusBar: boolean;
+  lightMode: boolean;
 };
 
 const settings: EditorSettings = readEditorSettings(localStorage);
 const chrome: ChromeSettings = readChromeSettings(localStorage);
+
+function applyAppTheme(): void {
+  document.documentElement.dataset.theme = chrome.lightMode ? "light" : "dark";
+}
 
 function inTauri(): boolean {
   return typeof window !== "undefined" && "__TAURI_INTERNALS__" in window;
@@ -177,12 +182,12 @@ function createTab(name: string, text: string, path: string | null, lineEnding: 
     doc: EditorStatePlaceholder(text),
     dirty: false,
   };
-  tab.doc = createDocument(text, settings, onEditorUpdate);
+  tab.doc = createDocument(text, settings, onEditorUpdate, chrome.lightMode);
   return tab;
 }
 
 function EditorStatePlaceholder(text: string): EditorState {
-  return createDocument(text, settings, onEditorUpdate);
+  return createDocument(text, settings, onEditorUpdate, chrome.lightMode);
 }
 
 function showTab(tab: Tab): void {
@@ -194,7 +199,7 @@ function showTab(tab: Tab): void {
     view.setState(tab.doc);
   }
   view.dispatch({ effects: [] });
-  tab.doc = applySettings(view, settings);
+  tab.doc = applySettings(view, settings, chrome.lightMode);
   paintStatus(tab);
   view.focus();
 }
@@ -276,6 +281,25 @@ function toggleShowStatusBar(): void {
   chrome.showStatusBar = !chrome.showStatusBar;
   saveChrome();
   renderChrome();
+}
+
+function toggleLightMode(): void {
+  chrome.lightMode = !chrome.lightMode;
+  saveChrome();
+  applyAppTheme();
+  pushSettings();
+}
+
+function toggleVimMode(): void {
+  settings.vimMode = !settings.vimMode;
+  saveSettings();
+  pushSettings();
+}
+
+function toggleThickCursor(): void {
+  settings.thickCursor = !settings.thickCursor;
+  saveSettings();
+  pushSettings();
 }
 
 function paintStatus(tab: Tab): void {
@@ -468,9 +492,9 @@ function setTabSize(size: number): void {
 function pushSettings(): void {
   for (const tab of tabs) {
     if (view && tab.id === activeId) {
-      tab.doc = applySettings(view, settings);
+      tab.doc = applySettings(view, settings, chrome.lightMode);
     } else {
-      tab.doc = retarget(tab.doc, settings);
+      tab.doc = retarget(tab.doc, settings, chrome.lightMode);
     }
   }
 }
@@ -544,6 +568,7 @@ function menuItems(name: string): MenuItem[] {
     return [
       { label: "Show Tabs", accel: "t", enabled: true, checked: chrome.showTabs, run: toggleShowTabs },
       { label: "Show Status Bar", accel: "s", enabled: true, checked: chrome.showStatusBar, run: toggleShowStatusBar },
+      { label: "Light Mode", accel: "m", enabled: true, checked: chrome.lightMode, run: toggleLightMode },
       {
         label: "Cursor Blink",
         accel: "b",
@@ -563,6 +588,8 @@ function menuItems(name: string): MenuItem[] {
           run: () => setCursorWidth(width),
         })),
       },
+      { label: "Thick Cursor", accel: "c", enabled: true, checked: settings.thickCursor, run: toggleThickCursor },
+      { label: "Vim", accel: "v", enabled: true, checked: settings.vimMode, run: toggleVimMode },
       {
         label: "Tab Length",
         accel: "l",
@@ -617,7 +644,10 @@ function openMenu(name: string, focusIndex = 0): void {
     if (index === items.length - 1 && name === "File") menu.append(separator());
     if (name === "Edit" && (item.label === "Cut" || item.label === "Find" || item.label === "Select All")) menu.append(separator());
     if (name === "View" && (item.label === "Zen Mode" || item.label === "Zoom In")) menu.append(separator());
-    if (name === "Settings" && (item.label === "Cursor Blink" || item.label === "Tab Length")) {
+    if (
+      name === "Settings" &&
+      (item.label === "Cursor Blink" || item.label === "Thick Cursor" || item.label === "Tab Length")
+    ) {
       menu.append(separator());
     }
     menu.append(menuButton(item));
@@ -995,6 +1025,7 @@ function bindWindowControls(): void {
 }
 
 async function boot(): Promise<void> {
+  applyAppTheme();
   renderShortcuts(document.querySelector("#shortcuts") as HTMLElement, SHORTCUTS);
   buildMenus();
   bindWindowControls();

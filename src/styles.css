@@ -73,7 +73,8 @@ button, input { font: inherit; color: inherit; }
   width: 16px;
   height: 16px;
   margin: 0;
-  color: var(--mark);
+  display: block;
+  border-radius: 3px;
   pointer-events: none;
 }
 
@@ -200,7 +201,8 @@ button, input { font: inherit; color: inherit; }
 .mark {
   width: 72px;
   height: 72px;
-  color: var(--mark);
+  display: block;
+  border-radius: 10px;
   pointer-events: none;
 }
 

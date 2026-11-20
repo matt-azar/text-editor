@@ -11,7 +11,17 @@
     <div id="app">
       <header id="titlebar">
         <div id="brand-drag" class="brand-drag" data-tauri-drag-region aria-label="Drag window">
-          <img class="brand" src="/mark-chalkboard.png" width="16" height="16" alt="" draggable="false" />
+          <svg class="brand" viewBox="0 0 64 64" width="16" height="16" aria-hidden="true">
+            <rect width="64" height="64" fill="var(--bg)" />
+            <g fill="none" stroke="var(--mark)" stroke-width="5" stroke-linecap="square">
+              <rect x="14" y="10" width="36" height="26" />
+              <rect x="16" y="38" width="32" height="3.5" />
+              <line x1="20" y1="41.5" x2="20" y2="52" />
+              <line x1="44" y1="41.5" x2="44" y2="52" />
+              <line x1="14" y1="52" x2="26" y2="52" />
+              <line x1="38" y1="52" x2="50" y2="52" />
+            </g>
+          </svg>
         </div>
         <nav id="menubar" aria-label="Application"></nav>
         <div class="drag" data-tauri-drag-region></div>
@@ -30,7 +40,17 @@
       <div id="tabs" hidden></div>
       <div id="empty">
         <div class="mark-drag" data-tauri-drag-region title="Drag window" aria-label="Drag window">
-          <img class="mark" src="/mark-chalkboard.png" width="72" height="72" alt="" draggable="false" />
+          <svg class="mark" viewBox="0 0 64 64" width="72" height="72" aria-hidden="true">
+            <rect width="64" height="64" fill="var(--bg)" />
+            <g fill="none" stroke="var(--mark)" stroke-width="1.75" stroke-linecap="square">
+              <rect x="14" y="10" width="36" height="26" />
+              <rect x="16" y="38" width="32" height="3.5" />
+              <line x1="20" y1="41.5" x2="20" y2="52" />
+              <line x1="44" y1="41.5" x2="44" y2="52" />
+              <line x1="14" y1="52" x2="26" y2="52" />
+              <line x1="38" y1="52" x2="50" y2="52" />
+            </g>
+          </svg>
         </div>
         <div class="shortcuts" id="shortcuts"></div>
       </div>

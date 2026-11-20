@@ -1,5 +1,6 @@
 import { getCurrentWebview } from "@tauri-apps/api/webview";
 import { getCurrentWindow } from "@tauri-apps/api/window";
+import { Vim } from "@replit/codemirror-vim";
 import type { EditorState } from "@codemirror/state";
 import { EditorView } from "@codemirror/view";
 import {
@@ -398,8 +399,8 @@ async function saveActive(saveAs = false): Promise<void> {
   await saveTab(tab, saveAs);
 }
 
-async function closeTab(tab: Tab): Promise<boolean> {
-  if (tab.dirty) {
+async function closeTab(tab: Tab, force = false): Promise<boolean> {
+  if (tab.dirty && !force) {
     activate(tab.id);
     const choice = await confirmSave(tab.name);
     if (choice === "cancel") return false;
@@ -423,7 +424,13 @@ async function closeTab(tab: Tab): Promise<boolean> {
   return true;
 }
 
-async function confirmCloseAll(): Promise<boolean> {
+async function confirmCloseAll(force = false): Promise<boolean> {
+  if (force) {
+    for (const tab of [...tabs]) {
+      await closeTab(tab, true);
+    }
+    return true;
+  }
   for (const tab of [...tabs]) {
     if (!tab.dirty) continue;
     const closed = await closeTab(tab);
@@ -432,12 +439,73 @@ async function confirmCloseAll(): Promise<boolean> {
   return true;
 }
 
-async function exitApp(): Promise<void> {
+async function exitApp(force = false): Promise<void> {
   if (closing) return;
-  if (!(await confirmCloseAll())) return;
+  if (!(await confirmCloseAll(force))) return;
   if (!inTauri()) return;
   closing = true;
   await getCurrentWindow().destroy();
+}
+
+async function saveAll(): Promise<boolean> {
+  for (const tab of [...tabs]) {
+    if (!tab.dirty) continue;
+    const saved = await saveTab(tab, false);
+    if (!saved) return false;
+  }
+  return true;
+}
+
+function exBang(params: { input?: string; argString?: string }): boolean {
+  return /!/.test(params.input ?? "") || /^\s*!/.test(params.argString ?? "");
+}
+
+/** Wire :w / :q / :wq and close relatives to save / close tab / exit. */
+function installVimExCommands(): void {
+  const write = (): void => {
+    void saveActive(false);
+  };
+  const quit = (params: { input?: string; argString?: string }): void => {
+    const tab = activeTab();
+    if (!tab) {
+      void exitApp(exBang(params));
+      return;
+    }
+    void closeTab(tab, exBang(params));
+  };
+  const writeQuit = (): void => {
+    void (async () => {
+      const tab = activeTab();
+      if (!tab) {
+        await exitApp();
+        return;
+      }
+      if (tab.dirty) {
+        const saved = await saveTab(tab, false);
+        if (!saved) return;
+      }
+      await closeTab(tab, true);
+    })();
+  };
+  const quitAll = (params: { input?: string; argString?: string }): void => {
+    void exitApp(exBang(params));
+  };
+  const writeQuitAll = (): void => {
+    void (async () => {
+      if (!(await saveAll())) return;
+      await exitApp(true);
+    })();
+  };
+
+  Vim.defineEx("write", "w", write);
+  Vim.defineEx("quit", "q", (_cm, params) => quit(params));
+  Vim.defineEx("wq", "wq", writeQuit);
+  Vim.defineEx("xit", "x", writeQuit);
+  Vim.defineEx("exit", "exi", writeQuit);
+  Vim.defineEx("qall", "qa", (_cm, params) => quitAll(params));
+  Vim.defineEx("quitall", "quita", (_cm, params) => quitAll(params));
+  Vim.defineEx("wqall", "wqa", writeQuitAll);
+  Vim.defineEx("xall", "xa", writeQuitAll);
 }
 
 
@@ -582,7 +650,7 @@ function menuItems(name: string): MenuItem[] {
           run: () => setCaretWidth(width),
         })),
       },
-      { label: "Vim", accel: "v", enabled: true, checked: settings.vimMode, run: toggleVimMode },
+      { label: "Vim", accel: "v", shortcut: "Ctrl+Shift+V", enabled: true, checked: settings.vimMode, run: toggleVimMode },
       {
         label: "Tab Length",
         accel: "l",
@@ -935,6 +1003,9 @@ function onKeyDown(event: KeyboardEvent): void {
   } else if (mod && event.shiftKey && !event.altKey && key === "w") {
     event.preventDefault();
     void exitApp();
+  } else if (mod && event.shiftKey && !event.altKey && key === "v") {
+    event.preventDefault();
+    toggleVimMode();
   } else if (mod && !event.shiftKey && !event.altKey && key === "w") {
     event.preventDefault();
     const tab = activeTab();
@@ -1019,6 +1090,7 @@ function bindWindowControls(): void {
 
 async function boot(): Promise<void> {
   applyAppTheme();
+  installVimExCommands();
   renderShortcuts(document.querySelector("#shortcuts") as HTMLElement, SHORTCUTS);
   buildMenus();
   bindWindowControls();

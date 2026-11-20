@@ -75,6 +75,7 @@ button, input { font: inherit; color: inherit; }
   margin: 0;
   display: block;
   border-radius: 3px;
+  overflow: hidden;
   pointer-events: none;
 }
 
@@ -203,6 +204,7 @@ button, input { font: inherit; color: inherit; }
   height: 72px;
   display: block;
   border-radius: 10px;
+  overflow: hidden;
   pointer-events: none;
 }
 

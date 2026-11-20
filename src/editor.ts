@@ -1,17 +1,20 @@
 import { defaultKeymap, history, historyKeymap, indentWithTab, redo, selectAll, undo } from "@codemirror/commands";
 import { bracketMatching, indentUnit } from "@codemirror/language";
 import { highlightSelectionMatches, openSearchPanel, search, searchKeymap } from "@codemirror/search";
-import { Compartment, EditorSelection, EditorState, type Extension } from "@codemirror/state";
+import { Compartment, EditorSelection, EditorState, Prec, type Extension } from "@codemirror/state";
 import {
+  Direction,
   drawSelection,
   EditorView,
   highlightActiveLine,
   highlightActiveLineGutter,
   keymap,
+  layer,
   lineNumbers,
+  type LayerMarker,
 } from "@codemirror/view";
 import { vim } from "@replit/codemirror-vim";
-import { normalizeCursorWidth, normalizeTabSize, type StoredEditorSettings } from "./state.ts";
+import { normalizeTabSize, type CaretWidth, type StoredEditorSettings } from "./state.ts";
 
 export type EditorSettings = StoredEditorSettings;
 
@@ -20,7 +23,7 @@ const wrapComp = new Compartment();
 const gutterComp = new Compartment();
 const indentComp = new Compartment();
 const activeLineComp = new Compartment();
-const cursorComp = new Compartment();
+const caretComp = new Compartment();
 const themeComp = new Compartment();
 const vimComp = new Compartment();
 
@@ -64,12 +67,12 @@ const darkTheme = EditorView.theme(
   { dark: true },
 );
 
-/** Off-white light editor chrome. */
+/** Eggshell light editor chrome. */
 const lightTheme = EditorView.theme(
   {
     "&": {
       height: "100%",
-      backgroundColor: "#f5f5f5",
+      backgroundColor: "#f0ead6",
       color: "#1e1e1e",
     },
     ".cm-scroller": {
@@ -94,7 +97,7 @@ const lightTheme = EditorView.theme(
       backgroundColor: "#add6ff !important",
     },
     ".cm-gutters": {
-      backgroundColor: "#f5f5f5",
+      backgroundColor: "#f0ead6",
       color: "#8a8a8a",
       border: "none",
     },
@@ -120,25 +123,262 @@ function activeLineExtensions(enabled: boolean): Extension[] {
   return enabled ? [highlightActiveLine(), highlightActiveLineGutter()] : [];
 }
 
-function cursorExtensions(blink: boolean, width: number, thick: boolean, light: boolean): Extension[] {
-  const cursorWidth = thick ? Math.max(normalizeCursorWidth(width), 6) : normalizeCursorWidth(width);
-  const caret = light ? "#1e1e1e" : "#aeafad";
-  const cursorTheme: Record<string, Record<string, string>> = {
-    ".cm-cursor, .cm-dropCursor": {
-      borderLeftWidth: `${cursorWidth}px`,
-      marginLeft: `${-(cursorWidth / 2)}px`,
-      borderLeftColor: caret,
-    },
+type GraphemeSegmenter = {
+  segment(input: string): Iterable<{ segment: string }>;
+};
+
+function graphemeSegmenter(): GraphemeSegmenter | null {
+  const Ctor = (
+    Intl as unknown as {
+      Segmenter?: new (locales: undefined, options: { granularity: "grapheme" }) => GraphemeSegmenter;
+    }
+  ).Segmenter;
+  return Ctor ? new Ctor(undefined, { granularity: "grapheme" }) : null;
+}
+
+const graphemes = graphemeSegmenter();
+
+/** The grapheme starting at `text`, or one code point when segmentation is unavailable. */
+function characterText(text: string): string {
+  if (!text) return "";
+  const segmented = graphemes?.segment(text)[Symbol.iterator]().next().value?.segment;
+  if (segmented) return segmented;
+  const point = text.codePointAt(0) ?? 0;
+  return text.slice(0, point > 0xffff ? 2 : 1);
+}
+
+/** Glyph to paint inside a block caret. Whitespace has no glyph; the block itself is the cell. */
+function caretGlyph(text: string): string {
+  const char = characterText(text);
+  return /^\s$/u.test(char) ? "" : char;
+}
+
+function documentBase(view: EditorView): { left: number; top: number } {
+  const rect = view.scrollDOM.getBoundingClientRect();
+  const left =
+    view.textDirection === Direction.LTR
+      ? rect.left
+      : rect.right - view.scrollDOM.clientWidth * view.scaleX;
+  return {
+    left: left - view.scrollDOM.scrollLeft * view.scaleX,
+    top: rect.top - view.scrollDOM.scrollTop * view.scaleY,
   };
+}
+
+function styleAt(view: EditorView, pos: number): CSSStyleDeclaration {
+  const found = view.domAtPos(pos).node;
+  const parent = found.parentNode;
+  const element = found instanceof HTMLElement ? found : parent instanceof HTMLElement ? parent : view.contentDOM;
+  return getComputedStyle(element);
+}
+
+function opaqueColor(color: string, fallback: string): string {
+  if (!color || color === "transparent" || color === "rgba(0, 0, 0, 0)") return fallback;
+  return color;
+}
+
+/** One-cell caret that swaps the character and background colors, like a Vim block caret. */
+class BlockCaretMarker implements LayerMarker {
+  constructor(
+    readonly left: number,
+    readonly top: number,
+    readonly width: number,
+    readonly height: number,
+    readonly letter: string,
+    readonly fontFamily: string,
+    readonly fontSize: string,
+    readonly fontWeight: string,
+    readonly blockColor: string,
+    readonly letterColor: string,
+  ) {}
+
+  eq(other: LayerMarker): boolean {
+    if (!(other instanceof BlockCaretMarker)) return false;
+    return (
+      this.left === other.left &&
+      this.top === other.top &&
+      this.width === other.width &&
+      this.height === other.height &&
+      this.letter === other.letter &&
+      this.fontFamily === other.fontFamily &&
+      this.fontSize === other.fontSize &&
+      this.fontWeight === other.fontWeight &&
+      this.blockColor === other.blockColor &&
+      this.letterColor === other.letterColor
+    );
+  }
+
+  draw(): HTMLElement {
+    const elt = document.createElement("div");
+    elt.className = "cm-block-caret";
+    this.adjust(elt);
+    return elt;
+  }
+
+  update(elt: HTMLElement): boolean {
+    this.adjust(elt);
+    return true;
+  }
+
+  private adjust(elt: HTMLElement): void {
+    elt.style.left = `${this.left}px`;
+    elt.style.top = `${this.top}px`;
+    elt.style.width = `${this.width}px`;
+    elt.style.height = `${this.height}px`;
+    elt.style.lineHeight = `${this.height}px`;
+    elt.style.fontFamily = this.fontFamily;
+    elt.style.fontSize = this.fontSize;
+    elt.style.fontWeight = this.fontWeight;
+    elt.style.backgroundColor = this.blockColor;
+    elt.style.color = this.letterColor;
+    elt.textContent = this.letter;
+  }
+}
+
+function blockCaretMarkers(view: EditorView, light: boolean): readonly BlockCaretMarker[] {
+  const textFallback = light ? "#1e1e1e" : "#c8c8c8";
+  const pageFallback = light ? "#f0ead6" : "#181818";
+  const pageColor = opaqueColor(getComputedStyle(view.dom).backgroundColor, pageFallback);
+  const base = documentBase(view);
+  const markers: BlockCaretMarker[] = [];
+  for (const range of view.state.selection.ranges) {
+    const head = range.head;
+    const line = view.state.doc.lineAt(head);
+    const style = styleAt(view, head);
+    const blockColor = opaqueColor(style.color, textFallback);
+    const charRect = head < line.to ? view.coordsForChar(head) : null;
+    let left: number;
+    let top: number;
+    let width: number;
+    let height: number;
+    if (charRect && charRect.right > charRect.left && charRect.bottom > charRect.top) {
+      left = (charRect.left - base.left) / view.scaleX;
+      top = (charRect.top - base.top) / view.scaleY;
+      width = (charRect.right - charRect.left) / view.scaleX;
+      height = (charRect.bottom - charRect.top) / view.scaleY;
+    } else {
+      const caret = view.coordsAtPos(head, 1);
+      if (!caret) continue;
+      left = (caret.left - base.left) / view.scaleX;
+      top = (caret.top - base.top) / view.scaleY;
+      width = view.defaultCharacterWidth;
+      height = (caret.bottom - caret.top) / view.scaleY;
+    }
+    if (width <= 0 || height <= 0) continue;
+    const letter = head < line.to ? caretGlyph(view.state.sliceDoc(head, line.to)) : "";
+    markers.push(
+      new BlockCaretMarker(
+        left,
+        top,
+        width,
+        height,
+        letter,
+        style.fontFamily,
+        style.fontSize,
+        style.fontWeight,
+        blockColor,
+        pageColor,
+      ),
+    );
+  }
+  return markers;
+}
+
+function blockCaretLayer(light: boolean): Extension {
+  return layer({
+    above: true,
+    class: "cm-block-caret-layer",
+    update(update, dom) {
+      if (update.transactions.some((tr) => tr.selection)) {
+        dom.style.animationName = dom.style.animationName === "cm-blink" ? "cm-blink2" : "cm-blink";
+      }
+      return (
+        update.docChanged ||
+        update.selectionSet ||
+        update.geometryChanged ||
+        update.viewportChanged ||
+        update.transactions.some((tr) => tr.reconfigured)
+      );
+    },
+    markers(view) {
+      return blockCaretMarkers(view, light);
+    },
+  });
+}
+
+function caretColor(light: boolean): string {
+  return light ? "#1e1e1e" : "#aeafad";
+}
+
+/** Vim paints its block caret in the text color. Reverse it so the glyph stays readable, matching our block caret. */
+function vimCaretColor(): Extension {
+  return Prec.highest(
+    EditorView.theme({
+      ".cm-fat-cursor": {
+        backgroundColor: "var(--text) !important",
+        color: "var(--bg) !important",
+      },
+      "&:not(.cm-focused) .cm-fat-cursor": {
+        backgroundColor: "transparent !important",
+        color: "transparent !important",
+        outline: "1px solid var(--text) !important",
+      },
+    }),
+  );
+}
+
+function caretExtensions(blink: boolean, width: CaretWidth, light: boolean, vimMode: boolean): Extension[] {
+  const barWidth = width === "block" ? 2 : width;
+  const color = caretColor(light);
+  const bar = {
+    borderLeftWidth: `${barWidth}px`,
+    marginLeft: `${-(barWidth / 2)}px`,
+    borderLeftColor: color,
+  };
+  // Vim mode draws its own caret. A second block here would sit on top of it.
+  const useBlock = width === "block" && !vimMode;
+  const caretTheme: Record<string, Record<string, string>> = useBlock
+    ? {
+        ".cm-content, .cm-line": {
+          fontVariantLigatures: "none",
+          fontFeatureSettings: '"liga" 0, "calt" 0',
+        },
+        ".cm-cursor": {
+          borderLeftWidth: "0px",
+          borderLeftColor: "transparent",
+          marginLeft: "0px",
+        },
+        ".cm-dropCursor": bar,
+        ".cm-block-caret-layer": { pointerEvents: "none" },
+        ".cm-block-caret": {
+          display: "none",
+          margin: "0",
+          padding: "0",
+          overflow: "hidden",
+          whiteSpace: "pre",
+          pointerEvents: "none",
+        },
+        "&.cm-focused .cm-block-caret": { display: "block" },
+      }
+    : {
+        ".cm-cursor, .cm-dropCursor": bar,
+      };
   if (!blink) {
-    cursorTheme["&.cm-focused > .cm-scroller > .cm-cursorLayer"] = {
+    caretTheme["&.cm-focused > .cm-scroller > .cm-cursorLayer"] = {
       animationName: "none",
       animationDuration: "0s",
     };
   }
+  if (useBlock && blink) {
+    caretTheme["&.cm-focused > .cm-scroller > .cm-block-caret-layer"] = {
+      animation: "steps(1) cm-blink 1.2s infinite",
+    };
+  }
   return [
     drawSelection({ cursorBlinkRate: blink ? 1200 : 0 }),
-    EditorView.theme(cursorTheme),
+    EditorView.theme(caretTheme),
+    vimCaretColor(),
+    ...(useBlock ? [blockCaretLayer(light)] : []),
   ];
 }
 
@@ -149,9 +389,7 @@ function settingEffects(settings: EditorSettings, lightMode: boolean) {
     gutterComp.reconfigure(settings.lineNumbers ? lineNumbers() : []),
     indentComp.reconfigure(indentExtensions(settings.tabSize)),
     activeLineComp.reconfigure(activeLineExtensions(settings.highlightCurrentLine)),
-    cursorComp.reconfigure(
-      cursorExtensions(settings.cursorBlink, settings.cursorWidth, settings.thickCursor, lightMode),
-    ),
+    caretComp.reconfigure(caretExtensions(settings.caretBlink, settings.caretWidth, lightMode, settings.vimMode)),
     themeComp.reconfigure(lightMode ? lightTheme : darkTheme),
     vimComp.reconfigure(settings.vimMode ? vim() : []),
   ];
@@ -171,9 +409,7 @@ export function createDocument(
       gutterComp.of(settings.lineNumbers ? lineNumbers() : []),
       indentComp.of(indentExtensions(settings.tabSize)),
       activeLineComp.of(activeLineExtensions(settings.highlightCurrentLine)),
-      cursorComp.of(
-        cursorExtensions(settings.cursorBlink, settings.cursorWidth, settings.thickCursor, lightMode),
-      ),
+      caretComp.of(caretExtensions(settings.caretBlink, settings.caretWidth, lightMode, settings.vimMode)),
       themeComp.of(lightMode ? lightTheme : darkTheme),
       vimComp.of(settings.vimMode ? vim() : []),
       history(),
@@ -211,7 +447,7 @@ export function retarget(state: EditorState, settings: EditorSettings, lightMode
   return state.update({ effects: settingEffects(settings, lightMode) }).state;
 }
 
-export function cursorPosition(state: EditorState): { line: number; column: number } {
+export function caretPosition(state: EditorState): { line: number; column: number } {
   const head = state.selection.main.head;
   const line = state.doc.lineAt(head);
   return { line: line.number, column: head - line.from + 1 };

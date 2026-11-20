@@ -6,10 +6,9 @@ export type StoredEditorSettings = {
   lineNumbers: boolean;
   tabSize: number;
   highlightCurrentLine: boolean;
-  cursorBlink: boolean;
-  cursorWidth: number;
+  caretBlink: boolean;
+  caretWidth: CaretWidth;
   vimMode: boolean;
-  thickCursor: boolean;
 };
 
 export type StoredChromeSettings = {
@@ -24,10 +23,9 @@ export const DEFAULT_EDITOR_SETTINGS: StoredEditorSettings = {
   lineNumbers: true,
   tabSize: 4,
   highlightCurrentLine: true,
-  cursorBlink: true,
-  cursorWidth: 2,
+  caretBlink: true,
+  caretWidth: 2,
   vimMode: false,
-  thickCursor: false,
 };
 
 export const DEFAULT_CHROME_SETTINGS: StoredChromeSettings = {
@@ -37,33 +35,42 @@ export const DEFAULT_CHROME_SETTINGS: StoredChromeSettings = {
 };
 
 export const TAB_SIZE_OPTIONS = [2, 4, 8] as const;
-/** Line caret widths in CSS pixels — 2 matches VS Code / Cursor’s thicker default feel. */
-export const CURSOR_WIDTH_OPTIONS = [1, 2, 3] as const;
+/** Line caret widths in CSS pixels, plus a one-character block. 2 matches VS Code / Cursor’s thicker default feel. */
+export const CARET_WIDTH_OPTIONS = [1, 2, 3, "block"] as const;
+export type CaretWidth = (typeof CARET_WIDTH_OPTIONS)[number];
 
 export function normalizeTabSize(value: unknown): number {
   const size = typeof value === "number" ? value : Number(value);
   return TAB_SIZE_OPTIONS.includes(size as (typeof TAB_SIZE_OPTIONS)[number]) ? size : DEFAULT_EDITOR_SETTINGS.tabSize;
 }
 
-export function normalizeCursorWidth(value: unknown): number {
+export function normalizeCaretWidth(value: unknown): CaretWidth {
+  if (value === "block") return "block";
   const width = typeof value === "number" ? value : Number(value);
-  return CURSOR_WIDTH_OPTIONS.includes(width as (typeof CURSOR_WIDTH_OPTIONS)[number])
-    ? width
-    : DEFAULT_EDITOR_SETTINGS.cursorWidth;
+  return CARET_WIDTH_OPTIONS.includes(width as CaretWidth) ? (width as CaretWidth) : DEFAULT_EDITOR_SETTINGS.caretWidth;
 }
 
-export function normalizeEditorSettings(raw: Partial<StoredEditorSettings> | null | undefined): StoredEditorSettings {
+/** Accepts the current caret fields and the older cursor/thick names. */
+type RawEditorSettings = Partial<Omit<StoredEditorSettings, "caretWidth" | "caretBlink">> & {
+  caretWidth?: unknown;
+  caretBlink?: boolean;
+  cursorWidth?: unknown;
+  cursorBlink?: boolean;
+  thickCursor?: boolean;
+};
+
+export function normalizeEditorSettings(raw: RawEditorSettings | null | undefined): StoredEditorSettings {
   const font = Number(raw?.fontSize);
+  const blink = raw?.caretBlink !== undefined ? raw.caretBlink : raw?.cursorBlink;
   return {
     fontSize: font >= 10 && font <= 32 ? font : DEFAULT_EDITOR_SETTINGS.fontSize,
     wordWrap: raw?.wordWrap !== false,
     lineNumbers: raw?.lineNumbers !== false,
     tabSize: normalizeTabSize(raw?.tabSize),
     highlightCurrentLine: raw?.highlightCurrentLine !== false,
-    cursorBlink: raw?.cursorBlink !== false,
-    cursorWidth: normalizeCursorWidth(raw?.cursorWidth),
+    caretBlink: blink !== false,
+    caretWidth: raw?.thickCursor === true ? "block" : normalizeCaretWidth(raw?.caretWidth ?? raw?.cursorWidth),
     vimMode: raw?.vimMode === true,
-    thickCursor: raw?.thickCursor === true,
   };
 }
 
@@ -91,8 +98,10 @@ export function readEditorSettings(storage: Storage): StoredEditorSettings {
     lineNumbers: storage.getItem("text-editor-gutter") !== "off",
     tabSize: Number(storage.getItem("text-editor-tab-size")),
     highlightCurrentLine: storage.getItem("text-editor-active-line") !== "off",
-    cursorBlink: storage.getItem("text-editor-cursor-blink") !== "off",
-    cursorWidth: Number(storage.getItem("text-editor-cursor-width")),
+    caretBlink: (storage.getItem("text-editor-caret-blink") ?? storage.getItem("text-editor-cursor-blink")) !== "off",
+    caretWidth: (storage.getItem("text-editor-caret-width") ?? storage.getItem("text-editor-cursor-width")) === "block"
+      ? "block"
+      : Number(storage.getItem("text-editor-caret-width") ?? storage.getItem("text-editor-cursor-width")),
     vimMode: storage.getItem("text-editor-vim") === "on",
     thickCursor: storage.getItem("text-editor-thick-cursor") === "on",
   });
@@ -106,10 +115,9 @@ export function writeEditorSettings(storage: Storage, settings: StoredEditorSett
   storage.setItem("text-editor-gutter", settings.lineNumbers ? "on" : "off");
   storage.setItem("text-editor-tab-size", String(settings.tabSize));
   storage.setItem("text-editor-active-line", settings.highlightCurrentLine ? "on" : "off");
-  storage.setItem("text-editor-cursor-blink", settings.cursorBlink ? "on" : "off");
-  storage.setItem("text-editor-cursor-width", String(settings.cursorWidth));
+  storage.setItem("text-editor-caret-blink", settings.caretBlink ? "on" : "off");
+  storage.setItem("text-editor-caret-width", String(settings.caretWidth));
   storage.setItem("text-editor-vim", settings.vimMode ? "on" : "off");
-  storage.setItem("text-editor-thick-cursor", settings.thickCursor ? "on" : "off");
 }
 
 export function readChromeSettings(storage: Storage): StoredChromeSettings {

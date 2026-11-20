@@ -6,7 +6,7 @@ import {
   nextTabIndex,
   nextUntitled,
   normalizeChromeSettings,
-  normalizeCursorWidth,
+  normalizeCaretWidth,
   normalizeEditorSettings,
   normalizeTabSize,
   pushRecent,
@@ -89,12 +89,13 @@ test("normalizeTabSize only allows 2, 4, or 8", () => {
   assert.equal(normalizeTabSize("nope"), 4);
 });
 
-test("normalizeCursorWidth only allows 1, 2, or 3", () => {
-  assert.equal(normalizeCursorWidth(1), 1);
-  assert.equal(normalizeCursorWidth(2), 2);
-  assert.equal(normalizeCursorWidth(3), 3);
-  assert.equal(normalizeCursorWidth(4), 2);
-  assert.equal(normalizeCursorWidth("nope"), 2);
+test("normalizeCaretWidth only allows 1, 2, 3, or block", () => {
+  assert.equal(normalizeCaretWidth(1), 1);
+  assert.equal(normalizeCaretWidth(2), 2);
+  assert.equal(normalizeCaretWidth(3), 3);
+  assert.equal(normalizeCaretWidth("block"), "block");
+  assert.equal(normalizeCaretWidth(4), 2);
+  assert.equal(normalizeCaretWidth("nope"), 2);
 });
 
 test("normalizeEditorSettings fills defaults", () => {
@@ -104,20 +105,20 @@ test("normalizeEditorSettings fills defaults", () => {
     lineNumbers: true,
     tabSize: 4,
     highlightCurrentLine: true,
-    cursorBlink: true,
-    cursorWidth: 2,
+    caretBlink: true,
+    caretWidth: 2,
     vimMode: false,
-    thickCursor: false,
   });
   assert.equal(normalizeEditorSettings({ fontSize: 18, wordWrap: false, tabSize: 2 }).fontSize, 18);
   assert.equal(normalizeEditorSettings({ fontSize: 18, wordWrap: false, tabSize: 2 }).wordWrap, false);
   assert.equal(normalizeEditorSettings({ fontSize: 18, wordWrap: false, tabSize: 2 }).tabSize, 2);
   assert.equal(normalizeEditorSettings({ highlightCurrentLine: false }).highlightCurrentLine, false);
-  assert.equal(normalizeEditorSettings({ cursorBlink: false }).cursorBlink, false);
-  assert.equal(normalizeEditorSettings({ cursorWidth: 3 }).cursorWidth, 3);
+  assert.equal(normalizeEditorSettings({ caretBlink: false }).caretBlink, false);
+  assert.equal(normalizeEditorSettings({ caretWidth: 3 }).caretWidth, 3);
+  assert.equal(normalizeEditorSettings({ caretWidth: "block" }).caretWidth, "block");
   assert.equal(normalizeEditorSettings({ vimMode: true }).vimMode, true);
-  assert.equal(normalizeEditorSettings({ thickCursor: true }).thickCursor, true);
-  assert.equal(normalizeEditorSettings({ vimMode: true }).thickCursor, false);
+  assert.equal(normalizeEditorSettings({ cursorBlink: false }).caretBlink, false);
+  assert.equal(normalizeEditorSettings({ thickCursor: true, cursorWidth: 1 }).caretWidth, "block");
 });
 
 test("editor settings round-trip through storage", () => {
@@ -128,10 +129,9 @@ test("editor settings round-trip through storage", () => {
     lineNumbers: false,
     tabSize: 2,
     highlightCurrentLine: false,
-    cursorBlink: false,
-    cursorWidth: 3,
+    caretBlink: false,
+    caretWidth: "block",
     vimMode: true,
-    thickCursor: true,
   });
   assert.deepEqual(readEditorSettings(storage), {
     fontSize: 16,
@@ -139,10 +139,9 @@ test("editor settings round-trip through storage", () => {
     lineNumbers: false,
     tabSize: 2,
     highlightCurrentLine: false,
-    cursorBlink: false,
-    cursorWidth: 3,
+    caretBlink: false,
+    caretWidth: "block",
     vimMode: true,
-    thickCursor: true,
   });
 });
 
@@ -163,10 +162,9 @@ test("editor settings migrate legacy localStorage keys", () => {
     lineNumbers: false,
     tabSize: 8,
     highlightCurrentLine: false,
-    cursorBlink: false,
-    cursorWidth: 1,
+    caretBlink: false,
+    caretWidth: "block",
     vimMode: true,
-    thickCursor: true,
   });
 });
 

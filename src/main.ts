@@ -18,7 +18,7 @@ import {
   applySettings,
   copySelection,
   createDocument,
-  cursorPosition,
+  caretPosition,
   duplicateLines,
   moveLines,
   openFind,
@@ -37,7 +37,7 @@ import {
   nextUntitled,
   readChromeSettings,
   readEditorSettings,
-  CURSOR_WIDTH_OPTIONS,
+  CARET_WIDTH_OPTIONS,
   TAB_SIZE_OPTIONS,
   windowTitle,
   writeChromeSettings,
@@ -296,14 +296,8 @@ function toggleVimMode(): void {
   pushSettings();
 }
 
-function toggleThickCursor(): void {
-  settings.thickCursor = !settings.thickCursor;
-  saveSettings();
-  pushSettings();
-}
-
 function paintStatus(tab: Tab): void {
-  const position = cursorPosition(tab.doc);
+  const position = caretPosition(tab.doc);
   statusPath.textContent = tab.path ?? "Untitled";
   statusPos.textContent = `Ln ${position.line}, Col ${position.column}`;
   statusEnding.textContent = tab.lineEnding === "crlf" ? "CRLF" : "LF";
@@ -471,14 +465,14 @@ function toggleHighlightCurrentLine(): void {
   pushSettings();
 }
 
-function toggleCursorBlink(): void {
-  settings.cursorBlink = !settings.cursorBlink;
+function toggleCaretBlink(): void {
+  settings.caretBlink = !settings.caretBlink;
   saveSettings();
   pushSettings();
 }
 
-function setCursorWidth(width: number): void {
-  settings.cursorWidth = width;
+function setCaretWidth(width: (typeof CARET_WIDTH_OPTIONS)[number]): void {
+  settings.caretWidth = width;
   saveSettings();
   pushSettings();
 }
@@ -570,25 +564,24 @@ function menuItems(name: string): MenuItem[] {
       { label: "Show Status Bar", accel: "s", enabled: true, checked: chrome.showStatusBar, run: toggleShowStatusBar },
       { label: "Light Mode", accel: "m", enabled: true, checked: chrome.lightMode, run: toggleLightMode },
       {
-        label: "Cursor Blink",
+        label: "Caret Blink",
         accel: "b",
         enabled: true,
-        checked: settings.cursorBlink,
-        run: toggleCursorBlink,
+        checked: settings.caretBlink,
+        run: toggleCaretBlink,
       },
       {
-        label: "Cursor Width",
+        label: "Caret Width",
         accel: "w",
         enabled: true,
-        children: CURSOR_WIDTH_OPTIONS.map((width) => ({
-          label: `${width} px`,
-          accel: String(width),
+        children: CARET_WIDTH_OPTIONS.map((width) => ({
+          label: width === "block" ? "Block" : `${width} px`,
+          accel: width === "block" ? "b" : String(width),
           enabled: true,
-          checked: settings.cursorWidth === width,
-          run: () => setCursorWidth(width),
+          checked: settings.caretWidth === width,
+          run: () => setCaretWidth(width),
         })),
       },
-      { label: "Thick Cursor", accel: "c", enabled: true, checked: settings.thickCursor, run: toggleThickCursor },
       { label: "Vim", accel: "v", enabled: true, checked: settings.vimMode, run: toggleVimMode },
       {
         label: "Tab Length",
@@ -646,7 +639,7 @@ function openMenu(name: string, focusIndex = 0): void {
     if (name === "View" && (item.label === "Zen Mode" || item.label === "Zoom In")) menu.append(separator());
     if (
       name === "Settings" &&
-      (item.label === "Cursor Blink" || item.label === "Thick Cursor" || item.label === "Tab Length")
+      (item.label === "Caret Blink" || item.label === "Vim" || item.label === "Tab Length")
     ) {
       menu.append(separator());
     }

@@ -104,6 +104,8 @@ test("normalizeFontFamily only allows known typefaces", () => {
   assert.equal(normalizeFontFamily("fira-code"), "fira-code");
   assert.equal(normalizeFontFamily("fixedsys"), "fixedsys");
   assert.equal(normalizeFontFamily("terminal"), "terminal");
+  assert.equal(normalizeFontFamily("dos-ega"), "dos-ega");
+  assert.equal(normalizeFontFamily("press-start-2p"), "press-start-2p");
   assert.equal(normalizeFontFamily("nope"), "cascadia-code");
   assert.equal(normalizeFontFamily(undefined), "cascadia-code");
 });

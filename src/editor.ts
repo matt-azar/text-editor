@@ -13,7 +13,7 @@ import {
   lineNumbers,
   type LayerMarker,
 } from "@codemirror/view";
-import { normalizeTabSize, type CaretWidth, type StoredEditorSettings } from "./state.ts";
+import { fontStackFor, normalizeTabSize, type CaretWidth, type FontFamilyId, type StoredEditorSettings } from "./state.ts";
 
 export type EditorSettings = StoredEditorSettings;
 
@@ -48,7 +48,6 @@ const darkTheme = EditorView.theme(
       color: "#c8c8c8",
     },
     ".cm-scroller": {
-      fontFamily: '"Cascadia Code", "Cascadia Mono", Consolas, monospace',
       lineHeight: "1.5",
     },
     ".cm-content": {
@@ -89,7 +88,6 @@ const lightTheme = EditorView.theme(
       color: "#1e1e1e",
     },
     ".cm-scroller": {
-      fontFamily: '"Cascadia Code", "Cascadia Mono", Consolas, monospace',
       lineHeight: "1.5",
     },
     ".cm-content": {
@@ -121,9 +119,10 @@ const lightTheme = EditorView.theme(
   { dark: false },
 );
 
-function fontTheme(px: number): Extension {
+function fontTheme(family: FontFamilyId, px: number): Extension {
   return EditorView.theme({
     "&": { fontSize: `${px}px` },
+    ".cm-scroller": { fontFamily: fontStackFor(family) },
   });
 }
 
@@ -397,7 +396,7 @@ function caretExtensions(blink: boolean, width: CaretWidth, light: boolean, vimM
 
 function settingEffects(settings: EditorSettings, lightMode: boolean) {
   return [
-    fontComp.reconfigure(fontTheme(settings.fontSize)),
+    fontComp.reconfigure(fontTheme(settings.fontFamily, settings.fontSize)),
     wrapComp.reconfigure(settings.wordWrap ? EditorView.lineWrapping : []),
     gutterComp.reconfigure(settings.lineNumbers ? lineNumbers() : []),
     indentComp.reconfigure(indentExtensions(settings.tabSize)),
@@ -417,7 +416,7 @@ export function createDocument(
   return EditorState.create({
     doc: text,
     extensions: [
-      fontComp.of(fontTheme(settings.fontSize)),
+      fontComp.of(fontTheme(settings.fontFamily, settings.fontSize)),
       wrapComp.of(settings.wordWrap ? EditorView.lineWrapping : []),
       gutterComp.of(settings.lineNumbers ? lineNumbers() : []),
       indentComp.of(indentExtensions(settings.tabSize)),

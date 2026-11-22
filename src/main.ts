@@ -39,10 +39,12 @@ import {
   readChromeSettings,
   readEditorSettings,
   CARET_WIDTH_OPTIONS,
+  FONT_OPTIONS,
   TAB_SIZE_OPTIONS,
   windowTitle,
   writeChromeSettings,
   writeEditorSettings,
+  type FontFamilyId,
   type LineEnding,
 } from "./state.ts";
 
@@ -586,6 +588,12 @@ function setTabSize(size: number): void {
   pushSettings();
 }
 
+function setFontFamily(family: FontFamilyId): void {
+  settings.fontFamily = family;
+  saveSettings();
+  pushSettings();
+}
+
 function pushSettings(): void {
   for (const tab of tabs) {
     if (view && tab.id === activeId) {
@@ -655,6 +663,9 @@ function menuItems(name: string): MenuItem[] {
         checked: settings.highlightCurrentLine,
         run: toggleHighlightCurrentLine,
       },
+      { label: "Show Tabs", accel: "t", enabled: true, checked: chrome.showTabs, run: toggleShowTabs },
+      { label: "Show Status Bar", accel: "s", enabled: true, checked: chrome.showStatusBar, run: toggleShowStatusBar },
+      { label: "Light Mode", accel: "m", enabled: true, checked: chrome.lightMode, run: toggleLightMode },
       { label: "Zen Mode", accel: "z", shortcut: "Ctrl+Shift+Z", enabled: true, checked: zenMode, run: toggleZenMode },
       { label: "Zoom In", accel: "i", shortcut: "Ctrl++", enabled: true, run: () => zoom(1) },
       { label: "Zoom Out", accel: "o", shortcut: "Ctrl+-", enabled: true, run: () => zoom(-1) },
@@ -663,9 +674,18 @@ function menuItems(name: string): MenuItem[] {
   }
   if (name === "Settings") {
     return [
-      { label: "Show Tabs", accel: "t", enabled: true, checked: chrome.showTabs, run: toggleShowTabs },
-      { label: "Show Status Bar", accel: "s", enabled: true, checked: chrome.showStatusBar, run: toggleShowStatusBar },
-      { label: "Light Mode", accel: "m", enabled: true, checked: chrome.lightMode, run: toggleLightMode },
+      {
+        label: "Font",
+        accel: "f",
+        enabled: true,
+        children: FONT_OPTIONS.map((option) => ({
+          label: option.label,
+          accel: option.accel,
+          enabled: true,
+          checked: settings.fontFamily === option.id,
+          run: () => setFontFamily(option.id),
+        })),
+      },
       {
         label: "Caret Blink",
         accel: "b",
@@ -685,7 +705,6 @@ function menuItems(name: string): MenuItem[] {
           run: () => setCaretWidth(width),
         })),
       },
-      { label: "Vim", accel: "v", shortcut: "Ctrl+Shift+V", enabled: true, checked: settings.vimMode, run: toggleVimMode },
       {
         label: "Tab Length",
         accel: "l",
@@ -698,6 +717,7 @@ function menuItems(name: string): MenuItem[] {
           run: () => setTabSize(size),
         })),
       },
+      { label: "Vim", accel: "v", shortcut: "Ctrl+Shift+V", enabled: true, checked: settings.vimMode, run: toggleVimMode },
     ];
   }
   return [
@@ -739,10 +759,15 @@ function openMenu(name: string, focusIndex = 0): void {
   items.forEach((item, index) => {
     if (index === items.length - 1 && name === "File") menu.append(separator());
     if (name === "Edit" && (item.label === "Cut" || item.label === "Find" || item.label === "Select All")) menu.append(separator());
-    if (name === "View" && (item.label === "Zen Mode" || item.label === "Zoom In")) menu.append(separator());
+    if (
+      name === "View" &&
+      (item.label === "Show Tabs" || item.label === "Zen Mode" || item.label === "Zoom In")
+    ) {
+      menu.append(separator());
+    }
     if (
       name === "Settings" &&
-      (item.label === "Caret Blink" || item.label === "Vim" || item.label === "Tab Length")
+      (item.label === "Caret Blink" || item.label === "Tab Length" || item.label === "Vim")
     ) {
       menu.append(separator());
     }

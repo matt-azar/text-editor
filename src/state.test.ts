@@ -8,6 +8,7 @@ import {
   normalizeChromeSettings,
   normalizeCaretWidth,
   normalizeEditorSettings,
+  normalizeFontFamily,
   normalizeTabSize,
   pushRecent,
   readChromeSettings,
@@ -98,8 +99,16 @@ test("normalizeCaretWidth only allows 1, 2, 3, or block", () => {
   assert.equal(normalizeCaretWidth("nope"), 2);
 });
 
+test("normalizeFontFamily only allows known typefaces", () => {
+  assert.equal(normalizeFontFamily("consolas"), "consolas");
+  assert.equal(normalizeFontFamily("fira-code"), "fira-code");
+  assert.equal(normalizeFontFamily("nope"), "cascadia-code");
+  assert.equal(normalizeFontFamily(undefined), "cascadia-code");
+});
+
 test("normalizeEditorSettings fills defaults", () => {
   assert.deepEqual(normalizeEditorSettings({}), {
+    fontFamily: "cascadia-code",
     fontSize: 14,
     wordWrap: true,
     lineNumbers: true,
@@ -112,6 +121,7 @@ test("normalizeEditorSettings fills defaults", () => {
   assert.equal(normalizeEditorSettings({ fontSize: 18, wordWrap: false, tabSize: 2 }).fontSize, 18);
   assert.equal(normalizeEditorSettings({ fontSize: 18, wordWrap: false, tabSize: 2 }).wordWrap, false);
   assert.equal(normalizeEditorSettings({ fontSize: 18, wordWrap: false, tabSize: 2 }).tabSize, 2);
+  assert.equal(normalizeEditorSettings({ fontFamily: "jetbrains-mono" }).fontFamily, "jetbrains-mono");
   assert.equal(normalizeEditorSettings({ highlightCurrentLine: false }).highlightCurrentLine, false);
   assert.equal(normalizeEditorSettings({ caretBlink: false }).caretBlink, false);
   assert.equal(normalizeEditorSettings({ caretWidth: 3 }).caretWidth, 3);
@@ -124,6 +134,7 @@ test("normalizeEditorSettings fills defaults", () => {
 test("editor settings round-trip through storage", () => {
   const storage = new MemoryStorage();
   writeEditorSettings(storage, {
+    fontFamily: "fira-code",
     fontSize: 16,
     wordWrap: false,
     lineNumbers: false,
@@ -134,6 +145,7 @@ test("editor settings round-trip through storage", () => {
     vimMode: true,
   });
   assert.deepEqual(readEditorSettings(storage), {
+    fontFamily: "fira-code",
     fontSize: 16,
     wordWrap: false,
     lineNumbers: false,
@@ -147,6 +159,7 @@ test("editor settings round-trip through storage", () => {
 
 test("editor settings migrate legacy localStorage keys", () => {
   const storage = new MemoryStorage();
+  storage.setItem("text-editor-font-family", "consolas");
   storage.setItem("text-editor-font", "18");
   storage.setItem("text-editor-wrap", "off");
   storage.setItem("text-editor-gutter", "off");
@@ -157,6 +170,7 @@ test("editor settings migrate legacy localStorage keys", () => {
   storage.setItem("text-editor-vim", "on");
   storage.setItem("text-editor-thick-cursor", "on");
   assert.deepEqual(readEditorSettings(storage), {
+    fontFamily: "consolas",
     fontSize: 18,
     wordWrap: false,
     lineNumbers: false,

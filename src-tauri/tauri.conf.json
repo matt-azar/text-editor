@@ -88,8 +88,8 @@
     "updater": {
       "pubkey": "dW50cnVzdGVkIGNvbW1lbnQ6IG1pbmlzaWduIHB1YmxpYyBrZXk6IDE1NkVEQzRGODlENDZDNzkKUldSNWJOU0pUOXh1RlMrMjdZY1lqTDh6a1djek1obkpBN0o3WExrTEFsaUZUbkdTSmJjR1J2V2oK",
       "endpoints": [
-        "https://github.com/matt-azar/text-editor/releases/latest/download/latest.json",
-        "https://text-editor-download.apps.grok.bot/latest.json"
+        "https://cdn.jsdelivr.net/gh/matt-azar/text-editor@main/download-site/latest.json",
+        "https://raw.githubusercontent.com/matt-azar/text-editor/main/download-site/latest.json"
       ],
       "windows": {
         "installMode": "passive"

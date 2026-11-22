@@ -48,6 +48,8 @@ export const FONT_OPTIONS = [
   { id: "consolas", label: "Consolas", accel: "n", stack: 'Consolas, "Courier New", monospace' },
   { id: "courier-new", label: "Courier New", accel: "u", stack: '"Courier New", Courier, monospace' },
   { id: "lucida-console", label: "Lucida Console", accel: "l", stack: '"Lucida Console", Monaco, monospace' },
+  { id: "fixedsys", label: "Fixedsys", accel: "x", stack: "Fixedsys, Terminal, monospace" },
+  { id: "terminal", label: "Terminal", accel: "t", stack: "Terminal, Fixedsys, monospace" },
   { id: "segoe-ui-mono", label: "Segoe UI Mono", accel: "s", stack: '"Segoe UI Mono", Consolas, monospace' },
   { id: "jetbrains-mono", label: "JetBrains Mono", accel: "j", stack: '"JetBrains Mono", Consolas, monospace' },
   { id: "fira-code", label: "Fira Code", accel: "f", stack: '"Fira Code", Consolas, monospace' },

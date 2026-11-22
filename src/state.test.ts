@@ -102,6 +102,8 @@ test("normalizeCaretWidth only allows 1, 2, 3, or block", () => {
 test("normalizeFontFamily only allows known typefaces", () => {
   assert.equal(normalizeFontFamily("consolas"), "consolas");
   assert.equal(normalizeFontFamily("fira-code"), "fira-code");
+  assert.equal(normalizeFontFamily("fixedsys"), "fixedsys");
+  assert.equal(normalizeFontFamily("terminal"), "terminal");
   assert.equal(normalizeFontFamily("nope"), "cascadia-code");
   assert.equal(normalizeFontFamily(undefined), "cascadia-code");
 });

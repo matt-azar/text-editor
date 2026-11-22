@@ -29,9 +29,9 @@ Do **not** commit the private key. Losing it means existing installs cannot veri
 
 ## Endpoints
 
-Apps check, in order:
+Apps check, in order (must be anonymous HTTPS that returns JSON, not an HTML login page):
 
-1. `https://github.com/matt-azar/text-editor/releases/latest/download/latest.json` (anonymous HTTPS)
-2. `https://text-editor-download.apps.grok.bot/latest.json`
+1. `https://cdn.jsdelivr.net/gh/matt-azar/text-editor@main/download-site/latest.json`
+2. `https://raw.githubusercontent.com/matt-azar/text-editor/main/download-site/latest.json`
 
-Each release should attach `latest.json` plus the NSIS setup `.exe` and `.sig` so the GitHub URL works.
+Keep `download-site/latest.json` on `main` in sync with each cut. Installer `url` inside that file should be a public raw/release URL (grok.bot login gates break Check for Updates).

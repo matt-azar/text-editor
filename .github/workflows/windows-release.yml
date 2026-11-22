@@ -34,6 +34,9 @@ jobs:
         run: npm ci
 
       - name: Build Windows NSIS installer
+        env:
+          TAURI_SIGNING_PRIVATE_KEY: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY }}
+          TAURI_SIGNING_PRIVATE_KEY_PASSWORD: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY_PASSWORD }}
         run: npm run tauri build -- --bundles nsis
 
       - name: Resolve release tag
@@ -48,12 +51,50 @@ jobs:
           installer=$(ls src-tauri/target/release/bundle/nsis/*-setup.exe | head -n 1)
           echo "installer=$installer" >> "$GITHUB_OUTPUT"
           echo "asset=$(basename "$installer")" >> "$GITHUB_OUTPUT"
+          sig="${installer}.sig"
+          if [ -f "$sig" ]; then
+            echo "sig=$sig" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: Write latest.json
+        if: steps.meta.outputs.sig != ''
+        shell: bash
+        env:
+          RELEASE_TAG: ${{ steps.meta.outputs.tag }}
+          RELEASE_ASSET: ${{ steps.meta.outputs.asset }}
+          SIG_PATH: ${{ steps.meta.outputs.sig }}
+        run: |
+          python - <<'PY'
+          import json, pathlib, os
+          from datetime import datetime, timezone
+          tag = os.environ["RELEASE_TAG"]
+          version = tag[1:] if tag.startswith("v") else tag
+          asset = os.environ["RELEASE_ASSET"]
+          signature = pathlib.Path(os.environ["SIG_PATH"]).read_text()
+          url = f"https://github.com/matt-azar/text-editor/releases/download/{tag}/{asset}"
+          manifest = {
+            "version": version,
+            "notes": "",
+            "pub_date": datetime.now(timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ"),
+            "platforms": {
+              "windows-x86_64": {
+                "url": url,
+                "signature": signature,
+              }
+            },
+          }
+          pathlib.Path("latest.json").write_text(json.dumps(manifest, indent=2) + "\n")
+          print(f"Wrote latest.json for {version}")
+          PY
 
       - name: Upload installer artifact
         uses: actions/upload-artifact@v4
         with:
           name: text-editor-windows-nsis
-          path: ${{ steps.meta.outputs.installer }}
+          path: |
+            ${{ steps.meta.outputs.installer }}
+            ${{ steps.meta.outputs.sig }}
+            latest.json
 
       - name: Publish GitHub Release
         uses: softprops/action-gh-release@v2
@@ -63,6 +104,9 @@ jobs:
           draft: false
           prerelease: false
           generate_release_notes: true
-          files: ${{ steps.meta.outputs.installer }}
+          files: |
+            ${{ steps.meta.outputs.installer }}
+            ${{ steps.meta.outputs.sig }}
+            latest.json
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}

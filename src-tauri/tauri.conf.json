@@ -34,7 +34,9 @@
   },
   "bundle": {
     "active": true,
-    "targets": ["nsis"],
+    "targets": [
+      "nsis"
+    ],
     "shortDescription": "A small frameless text editor",
     "longDescription": "Text Editor is a hyper-minimalist plain-text editor for Windows.",
     "category": "DeveloperTool",
@@ -43,14 +45,18 @@
     ],
     "fileAssociations": [
       {
-        "ext": ["txt"],
+        "ext": [
+          "txt"
+        ],
         "name": "Text document",
         "description": "Plain text",
         "mimeType": "text/plain",
         "role": "Editor"
       },
       {
-        "ext": ["md"],
+        "ext": [
+          "md"
+        ],
         "name": "Markdown document",
         "description": "Markdown text",
         "mimeType": "text/markdown",
@@ -75,6 +81,19 @@
       "icons/128x128@2x.png",
       "icons/icon.icns",
       "icons/icon.ico"
-    ]
+    ],
+    "createUpdaterArtifacts": true
+  },
+  "plugins": {
+    "updater": {
+      "pubkey": "dW50cnVzdGVkIGNvbW1lbnQ6IG1pbmlzaWduIHB1YmxpYyBrZXk6IDE1NkVEQzRGODlENDZDNzkKUldSNWJOU0pUOXh1RlMrMjdZY1lqTDh6a1djek1obkpBN0o3WExrTEFsaUZUbkdTSmJjR1J2V2oK",
+      "endpoints": [
+        "https://github.com/matt-azar/text-editor/releases/latest/download/latest.json",
+        "https://text-editor-download.apps.grok.bot/latest.json"
+      ],
+      "windows": {
+        "installMode": "passive"
+      }
+    }
   }
 }

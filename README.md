@@ -40,3 +40,5 @@ npm run tauri build -- --runner cargo-xwin --target x86_64-pc-windows-msvc --bun
 ```
 
 Pushing a `v*` tag (or running the **Windows release** workflow) builds on `windows-latest` and attaches the installer to a GitHub Release when this repository is mirrored to GitHub.
+
+Updater signing (private key via `TAURI_SIGNING_PRIVATE_KEY`): see `releases/UPDATER.md`.

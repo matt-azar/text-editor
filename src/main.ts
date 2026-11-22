@@ -702,6 +702,7 @@ function menuItems(name: string): MenuItem[] {
   }
   return [
     { label: "Keyboard Shortcuts", accel: "k", enabled: true, run: () => showShortcuts() },
+    { label: "Check for Updates", accel: "u", enabled: true, run: () => { void checkForUpdates(); } },
     { label: "About", accel: "a", enabled: true, run: () => showAbout() },
   ];
 }
@@ -944,6 +945,35 @@ function showAbout(): Promise<string> {
   const body = document.createElement("p");
   body.textContent = "Version 0.1.11. A small text editor.";
   return openDialog("Text Editor", body, [{ label: "Close", value: "close" }]);
+}
+
+async function checkForUpdates(): Promise<void> {
+  if (!inTauri()) {
+    await showError("Updates are only available in the desktop app.");
+    return;
+  }
+  try {
+    const { check } = await import("@tauri-apps/plugin-updater");
+    const update = await check();
+    if (!update) {
+      const ok = document.createElement("p");
+      ok.textContent = "You're up to date.";
+      await openDialog("Updates", ok, [{ label: "Close", value: "close" }]);
+      return;
+    }
+    const body = document.createElement("p");
+    body.textContent = `Version ${update.version} is available. Install and restart?`;
+    const choice = await openDialog("Update", body, [
+      { label: "Install", value: "install" },
+      { label: "Cancel", value: "cancel" },
+    ]);
+    if (choice !== "install") return;
+    await update.downloadAndInstall();
+    const { relaunch } = await import("@tauri-apps/plugin-process");
+    await relaunch();
+  } catch (error) {
+    await showError(errorText(error));
+  }
 }
 
 function showShortcuts(): Promise<string> {

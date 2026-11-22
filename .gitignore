@@ -30,4 +30,6 @@ src-tauri/icons/ios/
 # local code-signing material
 /tmp/
 *.pem
+*.key
+!*.key.pub
 

@@ -13,7 +13,6 @@ import {
   lineNumbers,
   type LayerMarker,
 } from "@codemirror/view";
-import { vim } from "@replit/codemirror-vim";
 import { normalizeTabSize, type CaretWidth, type StoredEditorSettings } from "./state.ts";
 
 export type EditorSettings = StoredEditorSettings;
@@ -26,6 +25,20 @@ const activeLineComp = new Compartment();
 const caretComp = new Compartment();
 const themeComp = new Compartment();
 const vimComp = new Compartment();
+
+/** Lazy so default (Vim off) cold start skips `@replit/codemirror-vim`. */
+let vimFactory: (() => Extension) | null = null;
+
+/** Load the Vim extension module once; safe to call repeatedly. */
+export async function ensureVimLoaded(): Promise<void> {
+  if (vimFactory) return;
+  const mod = await import("@replit/codemirror-vim");
+  vimFactory = mod.vim;
+}
+
+function vimExtension(): Extension {
+  return vimFactory ? vimFactory() : [];
+}
 
 const darkTheme = EditorView.theme(
   {
@@ -391,7 +404,7 @@ function settingEffects(settings: EditorSettings, lightMode: boolean) {
     activeLineComp.reconfigure(activeLineExtensions(settings.highlightCurrentLine)),
     caretComp.reconfigure(caretExtensions(settings.caretBlink, settings.caretWidth, lightMode, settings.vimMode)),
     themeComp.reconfigure(lightMode ? lightTheme : darkTheme),
-    vimComp.reconfigure(settings.vimMode ? vim() : []),
+    vimComp.reconfigure(settings.vimMode ? vimExtension() : []),
   ];
 }
 
@@ -411,7 +424,7 @@ export function createDocument(
       activeLineComp.of(activeLineExtensions(settings.highlightCurrentLine)),
       caretComp.of(caretExtensions(settings.caretBlink, settings.caretWidth, lightMode, settings.vimMode)),
       themeComp.of(lightMode ? lightTheme : darkTheme),
-      vimComp.of(settings.vimMode ? vim() : []),
+      vimComp.of(settings.vimMode ? vimExtension() : []),
       history(),
       EditorView.editable.of(true),
       bracketMatching(),

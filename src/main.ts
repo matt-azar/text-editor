@@ -1,6 +1,5 @@
 import { getCurrentWebview } from "@tauri-apps/api/webview";
 import { getCurrentWindow } from "@tauri-apps/api/window";
-import { Vim } from "@replit/codemirror-vim";
 import type { EditorState } from "@codemirror/state";
 import { EditorView } from "@codemirror/view";
 import {
@@ -21,6 +20,7 @@ import {
   createDocument,
   caretPosition,
   duplicateLines,
+  ensureVimLoaded,
   moveLines,
   openFind,
   openReplace,
@@ -291,8 +291,9 @@ function toggleLightMode(): void {
   pushSettings();
 }
 
-function toggleVimMode(): void {
+async function toggleVimMode(): Promise<void> {
   settings.vimMode = !settings.vimMode;
+  if (settings.vimMode) await prepareVim();
   saveSettings();
   pushSettings();
 }
@@ -460,8 +461,13 @@ function exBang(params: { input?: string; argString?: string }): boolean {
   return /!/.test(params.input ?? "") || /^\s*!/.test(params.argString ?? "");
 }
 
-/** Wire :w / :q / :wq and close relatives to save / close tab / exit. */
-function installVimExCommands(): void {
+let vimExReady = false;
+
+/** Load Vim + wire :w / :q / :wq relatives (once). */
+async function prepareVim(): Promise<void> {
+  await ensureVimLoaded();
+  if (vimExReady) return;
+  const { Vim } = await import("@replit/codemirror-vim");
   const write = (): void => {
     void saveActive(false);
   };
@@ -506,6 +512,7 @@ function installVimExCommands(): void {
   Vim.defineEx("quitall", "quita", (_cm, params) => quitAll(params));
   Vim.defineEx("wqall", "wqa", writeQuitAll);
   Vim.defineEx("xall", "xa", writeQuitAll);
+  vimExReady = true;
 }
 
 
@@ -1005,7 +1012,7 @@ function onKeyDown(event: KeyboardEvent): void {
     void exitApp();
   } else if (mod && event.shiftKey && !event.altKey && key === "v") {
     event.preventDefault();
-    toggleVimMode();
+    void toggleVimMode();
   } else if (mod && !event.shiftKey && !event.altKey && key === "w") {
     event.preventDefault();
     const tab = activeTab();
@@ -1090,7 +1097,6 @@ function bindWindowControls(): void {
 
 async function boot(): Promise<void> {
   applyAppTheme();
-  installVimExCommands();
   renderShortcuts(document.querySelector("#shortcuts") as HTMLElement, SHORTCUTS);
   buildMenus();
   bindWindowControls();
@@ -1116,25 +1122,21 @@ async function boot(): Promise<void> {
       // Opening from the menu still works when drag-and-drop is unavailable.
     }
     void refreshMaximize();
+    // Show before boot IPC / startup files so the window is not held invisible.
+    await win.show();
   }
 
-  try {
-    defaultEnding = await defaultLineEnding();
-  } catch {
-    defaultEnding = "lf";
-  }
-  try {
-    recent = await loadRecent();
-  } catch {
-    recent = [];
-  }
-  try {
-    for (const path of await startupFiles()) await openPath(path);
-  } catch {
-    // A failed startup file is reported by openPath.
-  }
+  const [ending, recentPaths, files] = await Promise.all([
+    defaultLineEnding().catch((): LineEnding => "lf"),
+    loadRecent().catch((): string[] => []),
+    startupFiles().catch((): string[] => []),
+    settings.vimMode ? prepareVim() : Promise.resolve(),
+  ]);
+  defaultEnding = ending;
+  recent = recentPaths;
+  renderChrome();
 
-  if (inTauri()) await getCurrentWindow().show();
+  for (const path of files) await openPath(path);
 }
 
 void boot();

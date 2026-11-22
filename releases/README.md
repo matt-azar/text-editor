@@ -2,6 +2,7 @@
 
 | Version | Installer |
 | --- | --- |
+| 0.1.12 | [Text-Editor_0.1.12_x64-setup.exe](https://text-editor-download.apps.grok.bot/Text-Editor_0.1.12_x64-setup.exe) |
 | 0.1.11 | [Text-Editor_0.1.11_x64-setup.exe](https://text-editor-download.apps.grok.bot/Text-Editor_0.1.11_x64-setup.exe) |
 | 0.1.10 | [Text-Editor_0.1.10_x64-setup.exe](https://text-editor-download.apps.grok.bot/Text-Editor_0.1.10_x64-setup.exe) |
 | 0.1.9 | [Text-Editor_0.1.9_x64-setup.exe](https://text-editor-download.apps.grok.bot/Text-Editor_0.1.9_x64-setup.exe) |

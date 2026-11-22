@@ -1,6 +1,7 @@
 export type LineEnding = "lf" | "crlf";
 
 export type StoredEditorSettings = {
+  fontFamily: FontFamilyId;
   fontSize: number;
   wordWrap: boolean;
   lineNumbers: boolean;
@@ -18,6 +19,7 @@ export type StoredChromeSettings = {
 };
 
 export const DEFAULT_EDITOR_SETTINGS: StoredEditorSettings = {
+  fontFamily: "cascadia-code",
   fontSize: 14,
   wordWrap: true,
   lineNumbers: true,
@@ -39,6 +41,22 @@ export const TAB_SIZE_OPTIONS = [2, 4, 8] as const;
 export const CARET_WIDTH_OPTIONS = [1, 2, 3, "block"] as const;
 export type CaretWidth = (typeof CARET_WIDTH_OPTIONS)[number];
 
+/** Editor typeface choices. Stacks prefer Windows fonts, then cross-platform monospace fallbacks. */
+export const FONT_OPTIONS = [
+  { id: "cascadia-code", label: "Cascadia Code", accel: "a", stack: '"Cascadia Code", "Cascadia Mono", Consolas, monospace' },
+  { id: "cascadia-mono", label: "Cascadia Mono", accel: "m", stack: '"Cascadia Mono", "Cascadia Code", Consolas, monospace' },
+  { id: "consolas", label: "Consolas", accel: "n", stack: 'Consolas, "Courier New", monospace' },
+  { id: "courier-new", label: "Courier New", accel: "u", stack: '"Courier New", Courier, monospace' },
+  { id: "lucida-console", label: "Lucida Console", accel: "l", stack: '"Lucida Console", Monaco, monospace' },
+  { id: "segoe-ui-mono", label: "Segoe UI Mono", accel: "s", stack: '"Segoe UI Mono", Consolas, monospace' },
+  { id: "jetbrains-mono", label: "JetBrains Mono", accel: "j", stack: '"JetBrains Mono", Consolas, monospace' },
+  { id: "fira-code", label: "Fira Code", accel: "f", stack: '"Fira Code", Consolas, monospace' },
+  { id: "source-code-pro", label: "Source Code Pro", accel: "r", stack: '"Source Code Pro", Consolas, monospace' },
+  { id: "ibm-plex-mono", label: "IBM Plex Mono", accel: "i", stack: '"IBM Plex Mono", Consolas, monospace' },
+] as const;
+
+export type FontFamilyId = (typeof FONT_OPTIONS)[number]["id"];
+
 export function normalizeTabSize(value: unknown): number {
   const size = typeof value === "number" ? value : Number(value);
   return TAB_SIZE_OPTIONS.includes(size as (typeof TAB_SIZE_OPTIONS)[number]) ? size : DEFAULT_EDITOR_SETTINGS.tabSize;
@@ -50,8 +68,20 @@ export function normalizeCaretWidth(value: unknown): CaretWidth {
   return CARET_WIDTH_OPTIONS.includes(width as CaretWidth) ? (width as CaretWidth) : DEFAULT_EDITOR_SETTINGS.caretWidth;
 }
 
+export function normalizeFontFamily(value: unknown): FontFamilyId {
+  if (typeof value === "string" && FONT_OPTIONS.some((option) => option.id === value)) {
+    return value as FontFamilyId;
+  }
+  return DEFAULT_EDITOR_SETTINGS.fontFamily;
+}
+
+export function fontStackFor(id: FontFamilyId): string {
+  return FONT_OPTIONS.find((option) => option.id === id)?.stack ?? FONT_OPTIONS[0].stack;
+}
+
 /** Accepts the current caret fields and the older cursor/thick names. */
-type RawEditorSettings = Partial<Omit<StoredEditorSettings, "caretWidth" | "caretBlink">> & {
+type RawEditorSettings = Partial<Omit<StoredEditorSettings, "caretWidth" | "caretBlink" | "fontFamily">> & {
+  fontFamily?: unknown;
   caretWidth?: unknown;
   caretBlink?: boolean;
   cursorWidth?: unknown;
@@ -63,6 +93,7 @@ export function normalizeEditorSettings(raw: RawEditorSettings | null | undefine
   const font = Number(raw?.fontSize);
   const blink = raw?.caretBlink !== undefined ? raw.caretBlink : raw?.cursorBlink;
   return {
+    fontFamily: normalizeFontFamily(raw?.fontFamily),
     fontSize: font >= 10 && font <= 32 ? font : DEFAULT_EDITOR_SETTINGS.fontSize,
     wordWrap: raw?.wordWrap !== false,
     lineNumbers: raw?.lineNumbers !== false,
@@ -93,6 +124,7 @@ export function readEditorSettings(storage: Storage): StoredEditorSettings {
     // Fall through to legacy keys.
   }
   return normalizeEditorSettings({
+    fontFamily: storage.getItem("text-editor-font-family") ?? undefined,
     fontSize: Number(storage.getItem("text-editor-font")),
     wordWrap: storage.getItem("text-editor-wrap") !== "off",
     lineNumbers: storage.getItem("text-editor-gutter") !== "off",
@@ -110,6 +142,7 @@ export function readEditorSettings(storage: Storage): StoredEditorSettings {
 export function writeEditorSettings(storage: Storage, settings: StoredEditorSettings): void {
   storage.setItem("text-editor-settings", JSON.stringify(normalizeEditorSettings(settings)));
   // Keep legacy keys in sync for older builds.
+  storage.setItem("text-editor-font-family", settings.fontFamily);
   storage.setItem("text-editor-font", String(settings.fontSize));
   storage.setItem("text-editor-wrap", settings.wordWrap ? "on" : "off");
   storage.setItem("text-editor-gutter", settings.lineNumbers ? "on" : "off");

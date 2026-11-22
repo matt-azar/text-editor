@@ -461,6 +461,23 @@ function exBang(params: { input?: string; argString?: string }): boolean {
   return /!/.test(params.input ?? "") || /^\s*!/.test(params.argString ?? "");
 }
 
+/** Path from `:e` / `:o` args; relative names resolve against the active tab’s folder. */
+function exOpenPath(params: { argString?: string; args?: string[] }): string | null {
+  const raw = (params.args?.length ? params.args.join(" ") : params.argString ?? "")
+    .replace(/^!\s*/, "")
+    .trim()
+    .replace(/^["']|["']$/g, "")
+    .trim();
+  if (!raw) return null;
+  if (/^[a-zA-Z]:[\\/]/.test(raw) || raw.startsWith("\\\\") || raw.startsWith("/")) return raw;
+  const base = activeTab()?.path;
+  if (!base) return raw;
+  const slash = base.includes("\\") ? "\\" : "/";
+  const dir = base.slice(0, Math.max(base.lastIndexOf("/"), base.lastIndexOf("\\")));
+  if (!dir) return raw;
+  return `${dir}${slash}${raw}`;
+}
+
 let vimExReady = false;
 
 /** Load Vim + wire :w / :q / :wq relatives (once). */
@@ -503,6 +520,15 @@ async function prepareVim(): Promise<void> {
     })();
   };
 
+  const open = (params: { argString?: string; args?: string[] }): void => {
+    const target = exOpenPath(params);
+    if (!target) {
+      void openFile();
+      return;
+    }
+    void openPath(target);
+  };
+
   Vim.defineEx("write", "w", write);
   Vim.defineEx("quit", "q", (_cm, params) => quit(params));
   Vim.defineEx("wq", "wq", writeQuit);
@@ -512,6 +538,8 @@ async function prepareVim(): Promise<void> {
   Vim.defineEx("quitall", "quita", (_cm, params) => quitAll(params));
   Vim.defineEx("wqall", "wqa", writeQuitAll);
   Vim.defineEx("xall", "xa", writeQuitAll);
+  Vim.defineEx("edit", "e", (_cm, params) => open(params));
+  Vim.defineEx("open", "o", (_cm, params) => open(params));
   vimExReady = true;
 }
 

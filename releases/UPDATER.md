@@ -1,5 +1,14 @@
 # Updater signing (Tauri)
 
+After pulling updater changes, install the JS plugins then restart dev:
+
+```
+npm install
+npm run tauri dev
+```
+
+Required packages (already in `package.json` / lockfile): `@tauri-apps/plugin-updater`, `@tauri-apps/plugin-process`. Vite cannot resolve them until `node_modules` is refreshed.
+
 Release builds that produce `.sig` / `latest.json` need the **private** updater key in the environment. The public key is already in `src-tauri/tauri.conf.json`.
 
 ## Supply the private key

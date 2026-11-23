@@ -35,10 +35,12 @@
   "bundle": {
     "active": true,
     "targets": [
-      "nsis"
+      "nsis",
+      "appimage",
+      "deb"
     ],
     "shortDescription": "A small frameless text editor",
-    "longDescription": "Text Editor is a hyper-minimalist plain-text editor for Windows.",
+    "longDescription": "Text Editor is a hyper-minimalist plain-text editor.",
     "category": "DeveloperTool",
     "resources": [
       "resources/app.ico"

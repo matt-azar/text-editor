@@ -9,7 +9,9 @@
     "build": "tsc && vite build",
     "preview": "vite preview",
     "test": "node --experimental-strip-types --test src/state.test.ts src/shortcuts.test.ts src/language.test.ts",
-    "tauri": "tauri"
+    "tauri": "tauri",
+    "tauri:build:linux": "tauri build --bundles appimage,deb",
+    "tauri:build:windows": "tauri build --bundles nsis"
   },
   "dependencies": {
     "@codemirror/commands": "^6.11.1",

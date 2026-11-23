@@ -8,7 +8,7 @@
     "dev": "vite",
     "build": "tsc && vite build",
     "preview": "vite preview",
-    "test": "node --experimental-strip-types --test src/state.test.ts src/shortcuts.test.ts",
+    "test": "node --experimental-strip-types --test src/state.test.ts src/shortcuts.test.ts src/language.test.ts",
     "tauri": "tauri",
     "tauri:build:linux": "tauri build --bundles appimage,deb",
     "tauri:build:windows": "tauri build --bundles nsis"
@@ -16,13 +16,16 @@
   "dependencies": {
     "@codemirror/commands": "^6.11.1",
     "@codemirror/language": "^6.13.1",
+    "@codemirror/language-data": "^6.5.2",
     "@codemirror/search": "^6.7.2",
     "@codemirror/state": "^6.7.6",
     "@codemirror/view": "^6.43.15",
+    "@lezer/highlight": "^1.2.5",
     "@replit/codemirror-vim": "^6.4.0",
     "@tauri-apps/api": "^2",
     "@tauri-apps/plugin-process": "^2.4.0",
-    "@tauri-apps/plugin-updater": "^2.14.1"
+    "@tauri-apps/plugin-updater": "^2.14.1",
+    "codemirror-lang-zig": "^0.1.0"
   },
   "devDependencies": {
     "@tauri-apps/cli": "^2",

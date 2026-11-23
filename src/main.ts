@@ -15,6 +15,7 @@ import {
   writeText,
 } from "./api.ts";
 import {
+  applyLanguage,
   applySettings,
   copySelection,
   createDocument,
@@ -26,11 +27,13 @@ import {
   openReplace,
   pasteClipboard,
   retarget,
+  retargetLanguage,
   runRedo,
   runSelectAll,
   runUndo,
   type EditorSettings,
 } from "./editor.ts";
+import { languageSupportForPath } from "./language.ts";
 import {
   chordFromEvent,
   chordLookup,
@@ -74,6 +77,8 @@ type Tab = {
   savedText: string;
   doc: EditorState;
   dirty: boolean;
+  /** Bumps when language should reload; stale async loads are ignored. */
+  languageSeq: number;
 };
 
 type MenuItem = {
@@ -213,15 +218,24 @@ function createTab(name: string, text: string, path: string | null, lineEnding: 
     name,
     lineEnding,
     savedText: text,
-    doc: EditorStatePlaceholder(text),
+    doc: createDocument(text, settings, onEditorUpdate, chrome.lightMode),
     dirty: false,
+    languageSeq: 0,
   };
-  tab.doc = createDocument(text, settings, onEditorUpdate, chrome.lightMode);
+  void refreshLanguage(tab);
   return tab;
 }
 
-function EditorStatePlaceholder(text: string): EditorState {
-  return createDocument(text, settings, onEditorUpdate, chrome.lightMode);
+/** Detect language from path/name and attach highlighting; no-op for plain text. */
+async function refreshLanguage(tab: Tab): Promise<void> {
+  const seq = ++tab.languageSeq;
+  const support = await languageSupportForPath(tab.path ?? tab.name);
+  if (tab.languageSeq !== seq) return;
+  if (view && tab.id === activeId) {
+    tab.doc = applyLanguage(view, support);
+  } else {
+    tab.doc = retargetLanguage(tab.doc, support);
+  }
 }
 
 function showTab(tab: Tab): void {
@@ -418,10 +432,12 @@ async function saveTab(tab: Tab, saveAs: boolean): Promise<boolean> {
     }
     const text = tab.doc.doc.toString();
     await writeText(path, text, tab.lineEnding);
+    const renamed = tab.path !== path || tab.name !== fileName(path);
     tab.path = path;
     tab.name = fileName(path);
     tab.savedText = text;
     tab.dirty = false;
+    if (renamed) void refreshLanguage(tab);
     recent = await rememberRecent(path);
     renderChrome();
     return true;

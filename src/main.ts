@@ -32,6 +32,22 @@ import {
   type EditorSettings,
 } from "./editor.ts";
 import {
+  chordFromEvent,
+  chordLookup,
+  COMMAND_DEFS,
+  conflictingCommands,
+  displayParts,
+  EMPTY_SCREEN_COMMANDS,
+  formatChord,
+  isAbandonedDefault,
+  overridesFromBindings,
+  readShortcutOverrides,
+  resolveBindings,
+  writeShortcutOverrides,
+  type CommandId,
+  type ShortcutBindings,
+} from "./shortcuts.ts";
+import {
   fileName,
   isDirty,
   nextTabIndex,
@@ -75,33 +91,45 @@ type DialogButton = {
   value: string;
 };
 
-const SHORTCUTS: { label: string; keys: string[] }[] = [
-  { label: "New File", keys: ["Ctrl", "N"] },
-  { label: "Open File", keys: ["Ctrl", "O"] },
-  { label: "Save", keys: ["Ctrl", "S"] },
-  { label: "Find", keys: ["Ctrl", "F"] },
-  { label: "Close File", keys: ["Ctrl", "W"] },
-  { label: "Open Recent", keys: ["Ctrl", "R"] },
-];
+let bindings: ShortcutBindings = resolveBindings(readShortcutOverrides(localStorage));
+let bindingLookup = chordLookup(bindings);
+/** When set, the shortcuts editor is capturing the next chord for this command. */
+let recordingCommand: CommandId | null = null;
+/** Repaint callback while the shortcuts editor dialog is open. */
+let paintShortcutEditor: (() => void) | null = null;
 
-const HELP_SHORTCUTS: { label: string; keys: string[] }[] = [
-  ...SHORTCUTS,
-  { label: "Save As", keys: ["Ctrl", "Shift", "S"] },
-  { label: "Exit", keys: ["Ctrl", "Shift", "W"] },
-  { label: "Replace", keys: ["Ctrl", "H"] },
-  { label: "Undo", keys: ["Ctrl", "Z"] },
-  { label: "Redo", keys: ["Ctrl", "Y"] },
-  { label: "Duplicate Line", keys: ["Ctrl", "Shift", "D"] },
-  { label: "Move Line Up", keys: ["Alt", "Up"] },
-  { label: "Move Line Down", keys: ["Alt", "Down"] },
-  { label: "Word Wrap", keys: ["Alt", "Z"] },
-  { label: "Zen Mode", keys: ["Ctrl", "Shift", "Z"] },
-  { label: "Zoom In", keys: ["Ctrl", "+"] },
-  { label: "Zoom Out", keys: ["Ctrl", "−"] },
-  { label: "Reset Zoom", keys: ["Ctrl", "0"] },
-  { label: "Next Tab", keys: ["Ctrl", "Tab"] },
-  { label: "Previous Tab", keys: ["Ctrl", "Shift", "Tab"] },
-];
+function saveBindings(next: ShortcutBindings): void {
+  bindings = next;
+  bindingLookup = chordLookup(bindings);
+  writeShortcutOverrides(localStorage, overridesFromBindings(bindings));
+}
+
+function chordHint(id: CommandId): string | undefined {
+  const chord = bindings[id];
+  return chord ? formatChord(chord) : undefined;
+}
+
+function emptyScreenShortcuts(): { label: string; keys: string[] }[] {
+  return EMPTY_SCREEN_COMMANDS.flatMap((id) => {
+    const def = COMMAND_DEFS.find((command) => command.id === id);
+    const chord = bindings[id];
+    if (!def || !chord) return [];
+    return [{ label: def.label, keys: displayParts(chord) }];
+  });
+}
+
+function helpShortcutRows(): { label: string; keys: string[] }[] {
+  return COMMAND_DEFS.flatMap((command) => {
+    const chord = bindings[command.id];
+    if (!chord) return [];
+    return [{ label: command.label, keys: displayParts(chord) }];
+  });
+}
+
+function refreshEmptyShortcuts(): void {
+  const host = document.querySelector("#shortcuts") as HTMLElement | null;
+  if (host) renderShortcuts(host, emptyScreenShortcuts());
+}
 
 const titlebarEl = document.querySelector("#titlebar") as HTMLElement;
 const tabsEl = document.querySelector("#tabs") as HTMLElement;
@@ -649,13 +677,13 @@ function menuItems(name: string): MenuItem[] {
         }))
       : [{ label: "No recent files", accel: "", enabled: false }];
     return [
-      { label: "New", accel: "n", shortcut: "Ctrl+N", enabled: true, run: newFile },
-      { label: "Open…", accel: "o", shortcut: "Ctrl+O", enabled: true, run: () => openFile() },
-      { label: "Open Recent", accel: "r", shortcut: "Ctrl+R", enabled: recent.length > 0, children: recentItems },
-      { label: "Save", accel: "s", shortcut: "Ctrl+S", enabled: hasTab, run: () => saveActive(false) },
-      { label: "Save As…", accel: "a", shortcut: "Ctrl+Shift+S", enabled: hasTab, run: () => saveActive(true) },
-      { label: "Close", accel: "c", shortcut: "Ctrl+W", enabled: hasTab, run: () => { const tab = activeTab(); if (tab) return closeTab(tab); } },
-      { label: "Exit", accel: "x", shortcut: "Ctrl+Shift+W", enabled: true, run: () => exitApp() },
+      { label: "New", accel: "n", shortcut: chordHint("file.new"), enabled: true, run: newFile },
+      { label: "Open…", accel: "o", shortcut: chordHint("file.open"), enabled: true, run: () => openFile() },
+      { label: "Open Recent", accel: "r", shortcut: chordHint("file.recent"), enabled: recent.length > 0, children: recentItems },
+      { label: "Save", accel: "s", shortcut: chordHint("file.save"), enabled: hasTab, run: () => saveActive(false) },
+      { label: "Save As…", accel: "a", shortcut: chordHint("file.saveAs"), enabled: hasTab, run: () => saveActive(true) },
+      { label: "Close", accel: "c", shortcut: chordHint("file.close"), enabled: hasTab, run: () => { const tab = activeTab(); if (tab) return closeTab(tab); } },
+      { label: "Exit", accel: "x", shortcut: chordHint("file.exit"), enabled: true, run: () => exitApp() },
     ];
   }
   if (name === "Edit") {
@@ -665,21 +693,21 @@ function menuItems(name: string): MenuItem[] {
       { label: "Cut", accel: "t", shortcut: "Ctrl+X", enabled: hasTab, run: () => withEditor((editor) => copySelection(editor, true)) },
       { label: "Copy", accel: "c", shortcut: "Ctrl+C", enabled: hasTab, run: () => withEditor((editor) => copySelection(editor, false)) },
       { label: "Paste", accel: "p", shortcut: "Ctrl+V", enabled: hasTab, run: () => withEditor(pasteClipboard) },
-      { label: "Find", accel: "f", shortcut: "Ctrl+F", enabled: hasTab, run: () => withEditor(openFind) },
-      { label: "Replace", accel: "e", shortcut: "Ctrl+H", enabled: hasTab, run: () => withEditor(openReplace) },
+      { label: "Find", accel: "f", shortcut: chordHint("edit.find"), enabled: hasTab, run: () => withEditor(openFind) },
+      { label: "Replace", accel: "e", shortcut: chordHint("edit.replace"), enabled: hasTab, run: () => withEditor(openReplace) },
       { label: "Select All", accel: "a", shortcut: "Ctrl+A", enabled: hasTab, run: () => withEditor(runSelectAll) },
     ];
   }
   if (name === "Selection") {
     return [
-      { label: "Duplicate Line", accel: "d", shortcut: "Ctrl+Shift+D", enabled: hasTab, run: () => withEditor(duplicateLines) },
-      { label: "Move Line Up", accel: "u", shortcut: "Alt+Up", enabled: hasTab, run: () => withEditor((editor) => moveLines(editor, -1)) },
-      { label: "Move Line Down", accel: "n", shortcut: "Alt+Down", enabled: hasTab, run: () => withEditor((editor) => moveLines(editor, 1)) },
+      { label: "Duplicate Line", accel: "d", shortcut: chordHint("edit.duplicateLine"), enabled: hasTab, run: () => withEditor(duplicateLines) },
+      { label: "Move Line Up", accel: "u", shortcut: chordHint("edit.moveLineUp"), enabled: hasTab, run: () => withEditor((editor) => moveLines(editor, -1)) },
+      { label: "Move Line Down", accel: "n", shortcut: chordHint("edit.moveLineDown"), enabled: hasTab, run: () => withEditor((editor) => moveLines(editor, 1)) },
     ];
   }
   if (name === "View") {
     return [
-      { label: "Word Wrap", accel: "w", shortcut: "Alt+Z", enabled: true, checked: settings.wordWrap, run: toggleWrap },
+      { label: "Word Wrap", accel: "w", shortcut: chordHint("view.wordWrap"), enabled: true, checked: settings.wordWrap, run: toggleWrap },
       { label: "Line Numbers", accel: "l", enabled: true, checked: settings.lineNumbers, run: toggleNumbers },
       {
         label: "Highlight Current Line",
@@ -691,10 +719,10 @@ function menuItems(name: string): MenuItem[] {
       { label: "Show Tabs", accel: "t", enabled: true, checked: chrome.showTabs, run: toggleShowTabs },
       { label: "Show Status Bar", accel: "s", enabled: true, checked: chrome.showStatusBar, run: toggleShowStatusBar },
       { label: "Light Mode", accel: "m", enabled: true, checked: chrome.lightMode, run: toggleLightMode },
-      { label: "Zen Mode", accel: "z", shortcut: "Ctrl+Shift+Z", enabled: true, checked: zenMode, run: toggleZenMode },
-      { label: "Zoom In", accel: "i", shortcut: "Ctrl++", enabled: true, run: () => zoom(1) },
-      { label: "Zoom Out", accel: "o", shortcut: "Ctrl+-", enabled: true, run: () => zoom(-1) },
-      { label: "Reset Zoom", accel: "r", shortcut: "Ctrl+0", enabled: true, run: () => zoom(0) },
+      { label: "Zen Mode", accel: "z", shortcut: chordHint("view.zen"), enabled: true, checked: zenMode, run: toggleZenMode },
+      { label: "Zoom In", accel: "i", shortcut: chordHint("view.zoomIn"), enabled: true, run: () => zoom(1) },
+      { label: "Zoom Out", accel: "o", shortcut: chordHint("view.zoomOut"), enabled: true, run: () => zoom(-1) },
+      { label: "Reset Zoom", accel: "r", shortcut: chordHint("view.zoomReset"), enabled: true, run: () => zoom(0) },
     ];
   }
   if (name === "Settings") {
@@ -773,7 +801,15 @@ function menuItems(name: string): MenuItem[] {
           run: () => setEditorPadding(padding),
         })),
       },
-      { label: "Vim", accel: "v", shortcut: "Ctrl+Shift+V", enabled: true, checked: settings.vimMode, run: toggleVimMode },
+      { label: "Vim", accel: "v", shortcut: chordHint("settings.vim"), enabled: true, checked: settings.vimMode, run: toggleVimMode },
+      {
+        label: "Keyboard Shortcuts",
+        accel: "k",
+        enabled: true,
+        run: () => {
+          void showShortcutEditor();
+        },
+      },
     ];
   }
   return [
@@ -824,7 +860,11 @@ function openMenu(name: string, focusIndex = 0): void {
     }
     if (
       name === "Settings" &&
-      (item.label === "Caret Blink" || item.label === "Tab Length" || item.label === "Line Spacing" || item.label === "Vim")
+      (item.label === "Caret Blink" ||
+        item.label === "Tab Length" ||
+        item.label === "Line Spacing" ||
+        item.label === "Vim" ||
+        item.label === "Keyboard Shortcuts")
     ) {
       menu.append(separator());
     }
@@ -1060,8 +1100,163 @@ async function checkForUpdates(): Promise<void> {
 function showShortcuts(): Promise<string> {
   const body = document.createElement("div");
   body.className = "shortcut-list";
-  renderShortcuts(body, HELP_SHORTCUTS);
+  renderShortcuts(body, helpShortcutRows());
   return openDialog("Keyboard Shortcuts", body, [{ label: "Close", value: "close" }]);
+}
+
+function runCommand(id: CommandId): void {
+  switch (id) {
+    case "file.new":
+      newFile();
+      return;
+    case "file.open":
+      void openFile();
+      return;
+    case "file.recent":
+      void openMostRecent();
+      return;
+    case "file.save":
+      void saveActive(false);
+      return;
+    case "file.saveAs":
+      void saveActive(true);
+      return;
+    case "file.close": {
+      const tab = activeTab();
+      if (tab) void closeTab(tab);
+      return;
+    }
+    case "file.exit":
+      void exitApp();
+      return;
+    case "edit.find":
+      if (activeTab()) withEditor(openFind);
+      return;
+    case "edit.replace":
+      if (activeTab()) withEditor(openReplace);
+      return;
+    case "edit.duplicateLine":
+      withEditor(duplicateLines);
+      return;
+    case "edit.moveLineUp":
+      withEditor((editor) => moveLines(editor, -1));
+      return;
+    case "edit.moveLineDown":
+      withEditor((editor) => moveLines(editor, 1));
+      return;
+    case "view.wordWrap":
+      toggleWrap();
+      return;
+    case "view.zen":
+      toggleZenMode();
+      return;
+    case "view.zoomIn":
+      zoom(1);
+      return;
+    case "view.zoomOut":
+      zoom(-1);
+      return;
+    case "view.zoomReset":
+      zoom(0);
+      return;
+    case "view.nextTab":
+      cycleTab(1);
+      return;
+    case "view.prevTab":
+      cycleTab(-1);
+      return;
+    case "settings.vim":
+      void toggleVimMode();
+      return;
+  }
+}
+
+function showShortcutEditor(): Promise<string> {
+  const body = document.createElement("div");
+  body.className = "shortcut-editor";
+  const list = document.createElement("div");
+  list.className = "shortcut-editor-list";
+  body.append(list);
+
+  const paint = (): void => {
+    const conflicts = conflictingCommands(bindings);
+    list.replaceChildren();
+    let focusBind: HTMLButtonElement | null = null;
+    for (const command of COMMAND_DEFS) {
+      const row = document.createElement("div");
+      row.className = `shortcut-row${conflicts.has(command.id) ? " conflict" : ""}`;
+      const label = document.createElement("span");
+      label.className = "shortcut-label";
+      label.textContent = command.label;
+      const bind = document.createElement("button");
+      bind.type = "button";
+      bind.className = `shortcut-bind${recordingCommand === command.id ? " recording" : ""}`;
+      const chord = bindings[command.id];
+      bind.textContent =
+        recordingCommand === command.id ? "Press keys…" : chord ? formatChord(chord) : "None";
+      bind.addEventListener("click", () => {
+        recordingCommand = command.id;
+        paint();
+      });
+      if (recordingCommand === command.id) focusBind = bind;
+      row.append(label, bind);
+      list.append(row);
+    }
+    focusBind?.focus();
+  };
+
+  paintShortcutEditor = paint;
+  paint();
+
+  return new Promise((resolve) => {
+    const dialog = document.createElement("div");
+    dialog.className = "dialog shortcut-dialog";
+    dialog.setAttribute("role", "dialog");
+    dialog.setAttribute("aria-modal", "true");
+    const heading = document.createElement("h2");
+    heading.textContent = "Keyboard Shortcuts";
+    const actions = document.createElement("div");
+    actions.className = "dialog-actions";
+    let settled = false;
+    const finish = (value: string) => {
+      if (settled) return;
+      settled = true;
+      recordingCommand = null;
+      paintShortcutEditor = null;
+      modal.replaceChildren();
+      refreshEmptyShortcuts();
+      resolve(value);
+      view?.focus();
+    };
+
+    const reset = document.createElement("button");
+    reset.type = "button";
+    reset.textContent = "Reset";
+    reset.addEventListener("click", () => {
+      recordingCommand = null;
+      saveBindings(resolveBindings({}));
+      paint();
+      refreshEmptyShortcuts();
+    });
+
+    const close = document.createElement("button");
+    close.type = "button";
+    close.textContent = "Close";
+    close.addEventListener("click", () => finish("close"));
+
+    actions.append(reset, close);
+    dialog.append(heading, body, actions);
+    modal.replaceChildren(dialog);
+    close.focus();
+
+    dialog.addEventListener("keydown", (event) => {
+      if (recordingCommand) return;
+      if (event.key === "Escape") {
+        event.preventDefault();
+        finish("close");
+      }
+    });
+  });
 }
 
 function onKeyDown(event: KeyboardEvent): void {
@@ -1071,15 +1266,42 @@ function onKeyDown(event: KeyboardEvent): void {
     altAlone = false;
   }
 
-  if (modal.childElementCount > 0) return;
-
-  const modKey = event.ctrlKey || event.metaKey;
-  if (modKey && event.shiftKey && !event.altKey && event.key.toLowerCase() === "z") {
+  // Capture rebinds even when the shortcuts dialog holds focus.
+  if (recordingCommand) {
+    if (event.key === "Escape") {
+      event.preventDefault();
+      event.stopPropagation();
+      recordingCommand = null;
+      paintShortcutEditor?.();
+      return;
+    }
+    if (event.key === "Backspace" || event.key === "Delete") {
+      event.preventDefault();
+      event.stopPropagation();
+      const id = recordingCommand;
+      recordingCommand = null;
+      saveBindings({ ...bindings, [id]: null });
+      paintShortcutEditor?.();
+      refreshEmptyShortcuts();
+      return;
+    }
+    const chord = chordFromEvent(event);
+    if (!chord) {
+      event.preventDefault();
+      event.stopPropagation();
+      return;
+    }
     event.preventDefault();
     event.stopPropagation();
-    toggleZenMode();
+    const id = recordingCommand;
+    recordingCommand = null;
+    saveBindings({ ...bindings, [id]: chord });
+    paintShortcutEditor?.();
+    refreshEmptyShortcuts();
     return;
   }
+
+  if (modal.childElementCount > 0) return;
 
   if (menuName) {
     const entries = menuEntries();
@@ -1128,55 +1350,22 @@ function onKeyDown(event: KeyboardEvent): void {
   }
 
   if (event.defaultPrevented) return;
-  const key = event.key.toLowerCase();
-  const mod = event.ctrlKey || event.metaKey;
 
-  if (mod && !event.altKey && key === "n") {
+  const chord = chordFromEvent(event);
+  if (!chord) return;
+
+  const command = bindingLookup.get(chord);
+  if (command) {
     event.preventDefault();
-    newFile();
-  } else if (mod && !event.altKey && key === "o") {
+    event.stopPropagation();
+    runCommand(command);
+    return;
+  }
+
+  // Stop CodeMirror / browser from keeping a rebound-away default.
+  if (isAbandonedDefault(chord, bindings)) {
     event.preventDefault();
-    void openFile();
-  } else if (mod && !event.shiftKey && !event.altKey && key === "r") {
-    event.preventDefault();
-    void openMostRecent();
-  } else if (mod && event.shiftKey && key === "s") {
-    event.preventDefault();
-    void saveActive(true);
-  } else if (mod && !event.shiftKey && key === "s") {
-    event.preventDefault();
-    void saveActive(false);
-  } else if (mod && event.shiftKey && !event.altKey && key === "w") {
-    event.preventDefault();
-    void exitApp();
-  } else if (mod && event.shiftKey && !event.altKey && key === "v") {
-    event.preventDefault();
-    void toggleVimMode();
-  } else if (mod && !event.shiftKey && !event.altKey && key === "w") {
-    event.preventDefault();
-    const tab = activeTab();
-    if (tab) void closeTab(tab);
-  } else if (mod && !event.altKey && event.key === "Tab") {
-    event.preventDefault();
-    cycleTab(event.shiftKey ? -1 : 1);
-  } else if (mod && !event.altKey && (event.key === "=" || event.key === "+")) {
-    event.preventDefault();
-    zoom(1);
-  } else if (mod && !event.altKey && (event.key === "-" || event.key === "_")) {
-    event.preventDefault();
-    zoom(-1);
-  } else if (mod && !event.shiftKey && !event.altKey && event.key === "0") {
-    event.preventDefault();
-    zoom(0);
-  } else if (event.altKey && !mod && key === "z") {
-    event.preventDefault();
-    toggleWrap();
-  } else if (!view?.hasFocus && mod && !event.altKey && key === "f" && activeTab()) {
-    event.preventDefault();
-    withEditor(openFind);
-  } else if (!view?.hasFocus && mod && !event.altKey && key === "h" && activeTab()) {
-    event.preventDefault();
-    withEditor(openReplace);
+    event.stopPropagation();
   }
 }
 
@@ -1236,7 +1425,7 @@ function bindWindowControls(): void {
 
 async function boot(): Promise<void> {
   applyAppTheme();
-  renderShortcuts(document.querySelector("#shortcuts") as HTMLElement, SHORTCUTS);
+  refreshEmptyShortcuts();
   buildMenus();
   bindWindowControls();
   renderChrome();

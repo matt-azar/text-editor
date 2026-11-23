@@ -1,5 +1,5 @@
 import { defaultKeymap, history, historyKeymap, indentWithTab, redo, selectAll, undo } from "@codemirror/commands";
-import { bracketMatching, indentUnit } from "@codemirror/language";
+import { bracketMatching, HighlightStyle, indentUnit, syntaxHighlighting } from "@codemirror/language";
 import { highlightSelectionMatches, openSearchPanel, search, searchKeymap } from "@codemirror/search";
 import { Compartment, EditorSelection, EditorState, Prec, type Extension } from "@codemirror/state";
 import {
@@ -13,6 +13,7 @@ import {
   lineNumbers,
   type LayerMarker,
 } from "@codemirror/view";
+import { tags as t } from "@lezer/highlight";
 import {
   fontStackFor,
   normalizeEditorPadding,
@@ -33,7 +34,159 @@ const layoutComp = new Compartment();
 const activeLineComp = new Compartment();
 const caretComp = new Compartment();
 const themeComp = new Compartment();
+const languageComp = new Compartment();
 const vimComp = new Compartment();
+
+/** Syntax colors for the dark editor chrome (#181818). */
+const darkHighlight = HighlightStyle.define(
+  [
+    { tag: t.comment, color: "#6a9955" },
+    { tag: t.lineComment, color: "#6a9955" },
+    { tag: t.blockComment, color: "#6a9955" },
+    { tag: t.docComment, color: "#6a9955" },
+    { tag: t.keyword, color: "#569cd6" },
+    { tag: t.controlKeyword, color: "#c586c0" },
+    { tag: t.moduleKeyword, color: "#c586c0" },
+    { tag: t.operatorKeyword, color: "#569cd6" },
+    { tag: t.definitionKeyword, color: "#569cd6" },
+    { tag: t.modifier, color: "#569cd6" },
+    { tag: t.self, color: "#569cd6" },
+    { tag: t.atom, color: "#569cd6" },
+    { tag: t.bool, color: "#569cd6" },
+    { tag: t.null, color: "#569cd6" },
+    { tag: t.number, color: "#b5cea8" },
+    { tag: t.integer, color: "#b5cea8" },
+    { tag: t.float, color: "#b5cea8" },
+    { tag: t.string, color: "#ce9178" },
+    { tag: t.special(t.string), color: "#d7ba7d" },
+    { tag: t.character, color: "#ce9178" },
+    { tag: t.regexp, color: "#d16969" },
+    { tag: t.escape, color: "#d7ba7d" },
+    { tag: t.color, color: "#ce9178" },
+    { tag: t.url, color: "#ce9178" },
+    { tag: t.typeName, color: "#4ec9b0" },
+    { tag: t.className, color: "#4ec9b0" },
+    { tag: t.namespace, color: "#4ec9b0" },
+    { tag: t.macroName, color: "#4ec9b0" },
+    { tag: t.definition(t.typeName), color: "#4ec9b0" },
+    { tag: t.function(t.variableName), color: "#dcdcaa" },
+    { tag: t.function(t.propertyName), color: "#dcdcaa" },
+    { tag: t.definition(t.function(t.variableName)), color: "#dcdcaa" },
+    { tag: t.propertyName, color: "#9cdcfe" },
+    { tag: t.definition(t.propertyName), color: "#9cdcfe" },
+    { tag: t.variableName, color: "#9cdcfe" },
+    { tag: t.definition(t.variableName), color: "#9cdcfe" },
+    { tag: t.local(t.variableName), color: "#9cdcfe" },
+    { tag: t.labelName, color: "#c8c8c8" },
+    { tag: t.operator, color: "#d4d4d4" },
+    { tag: t.compareOperator, color: "#d4d4d4" },
+    { tag: t.arithmeticOperator, color: "#d4d4d4" },
+    { tag: t.logicOperator, color: "#d4d4d4" },
+    { tag: t.bitwiseOperator, color: "#d4d4d4" },
+    { tag: t.punctuation, color: "#d4d4d4" },
+    { tag: t.bracket, color: "#ffd700" },
+    { tag: t.angleBracket, color: "#808080" },
+    { tag: t.squareBracket, color: "#d4d4d4" },
+    { tag: t.paren, color: "#d4d4d4" },
+    { tag: t.brace, color: "#d4d4d4" },
+    { tag: t.separator, color: "#d4d4d4" },
+    { tag: t.meta, color: "#c586c0" },
+    { tag: t.annotation, color: "#dcdcaa" },
+    { tag: t.processingInstruction, color: "#c586c0" },
+    { tag: t.heading, color: "#569cd6", fontWeight: "bold" },
+    { tag: t.heading1, color: "#569cd6", fontWeight: "bold" },
+    { tag: t.heading2, color: "#569cd6", fontWeight: "bold" },
+    { tag: t.strong, fontWeight: "bold" },
+    { tag: t.emphasis, fontStyle: "italic" },
+    { tag: t.strikethrough, textDecoration: "line-through" },
+    { tag: t.link, color: "#ce9178" },
+    { tag: t.monospace, color: "#ce9178" },
+    { tag: t.tagName, color: "#569cd6" },
+    { tag: t.attributeName, color: "#9cdcfe" },
+    { tag: t.attributeValue, color: "#ce9178" },
+    { tag: t.documentMeta, color: "#6a9955" },
+    { tag: t.invalid, color: "#f44747" },
+  ],
+  { themeType: "dark" },
+);
+
+/** Syntax colors for the eggshell light editor chrome (#f0ead6). */
+const lightHighlight = HighlightStyle.define(
+  [
+    { tag: t.comment, color: "#6a737d" },
+    { tag: t.lineComment, color: "#6a737d" },
+    { tag: t.blockComment, color: "#6a737d" },
+    { tag: t.docComment, color: "#6a737d" },
+    { tag: t.keyword, color: "#0550ae" },
+    { tag: t.controlKeyword, color: "#cf222e" },
+    { tag: t.moduleKeyword, color: "#cf222e" },
+    { tag: t.operatorKeyword, color: "#0550ae" },
+    { tag: t.definitionKeyword, color: "#0550ae" },
+    { tag: t.modifier, color: "#0550ae" },
+    { tag: t.self, color: "#0550ae" },
+    { tag: t.atom, color: "#0550ae" },
+    { tag: t.bool, color: "#0550ae" },
+    { tag: t.null, color: "#0550ae" },
+    { tag: t.number, color: "#0550ae" },
+    { tag: t.integer, color: "#0550ae" },
+    { tag: t.float, color: "#0550ae" },
+    { tag: t.string, color: "#0a3069" },
+    { tag: t.special(t.string), color: "#0a3069" },
+    { tag: t.character, color: "#0a3069" },
+    { tag: t.regexp, color: "#116329" },
+    { tag: t.escape, color: "#0a3069" },
+    { tag: t.color, color: "#0a3069" },
+    { tag: t.url, color: "#0a3069" },
+    { tag: t.typeName, color: "#953800" },
+    { tag: t.className, color: "#953800" },
+    { tag: t.namespace, color: "#953800" },
+    { tag: t.macroName, color: "#953800" },
+    { tag: t.definition(t.typeName), color: "#953800" },
+    { tag: t.function(t.variableName), color: "#8250df" },
+    { tag: t.function(t.propertyName), color: "#8250df" },
+    { tag: t.definition(t.function(t.variableName)), color: "#8250df" },
+    { tag: t.propertyName, color: "#0550ae" },
+    { tag: t.definition(t.propertyName), color: "#0550ae" },
+    { tag: t.variableName, color: "#1e1e1e" },
+    { tag: t.definition(t.variableName), color: "#1e1e1e" },
+    { tag: t.local(t.variableName), color: "#1e1e1e" },
+    { tag: t.labelName, color: "#1e1e1e" },
+    { tag: t.operator, color: "#1e1e1e" },
+    { tag: t.compareOperator, color: "#1e1e1e" },
+    { tag: t.arithmeticOperator, color: "#1e1e1e" },
+    { tag: t.logicOperator, color: "#1e1e1e" },
+    { tag: t.bitwiseOperator, color: "#1e1e1e" },
+    { tag: t.punctuation, color: "#1e1e1e" },
+    { tag: t.bracket, color: "#1e1e1e" },
+    { tag: t.angleBracket, color: "#6a737d" },
+    { tag: t.squareBracket, color: "#1e1e1e" },
+    { tag: t.paren, color: "#1e1e1e" },
+    { tag: t.brace, color: "#1e1e1e" },
+    { tag: t.separator, color: "#1e1e1e" },
+    { tag: t.meta, color: "#cf222e" },
+    { tag: t.annotation, color: "#8250df" },
+    { tag: t.processingInstruction, color: "#cf222e" },
+    { tag: t.heading, color: "#0550ae", fontWeight: "bold" },
+    { tag: t.heading1, color: "#0550ae", fontWeight: "bold" },
+    { tag: t.heading2, color: "#0550ae", fontWeight: "bold" },
+    { tag: t.strong, fontWeight: "bold" },
+    { tag: t.emphasis, fontStyle: "italic" },
+    { tag: t.strikethrough, textDecoration: "line-through" },
+    { tag: t.link, color: "#0a3069" },
+    { tag: t.monospace, color: "#0a3069" },
+    { tag: t.tagName, color: "#116329" },
+    { tag: t.attributeName, color: "#0550ae" },
+    { tag: t.attributeValue, color: "#0a3069" },
+    { tag: t.documentMeta, color: "#6a737d" },
+    { tag: t.invalid, color: "#cf222e" },
+  ],
+  { themeType: "light" },
+);
+
+const highlightExtensions: Extension = [
+  syntaxHighlighting(darkHighlight),
+  syntaxHighlighting(lightHighlight),
+];
 
 /** Lazy so default (Vim off) cold start skips `@replit/codemirror-vim`. */
 let vimFactory: (() => Extension) | null = null;
@@ -435,6 +588,8 @@ export function createDocument(
       activeLineComp.of(activeLineExtensions(settings.highlightCurrentLine)),
       caretComp.of(caretExtensions(settings.caretBlink, settings.caretWidth, lightMode, settings.vimMode)),
       themeComp.of(lightMode ? lightTheme : darkTheme),
+      languageComp.of([]),
+      highlightExtensions,
       vimComp.of(settings.vimMode ? vimExtension() : []),
       history(),
       EditorView.editable.of(true),
@@ -469,6 +624,17 @@ export function applySettings(view: EditorView, settings: EditorSettings, lightM
 
 export function retarget(state: EditorState, settings: EditorSettings, lightMode = false): EditorState {
   return state.update({ effects: settingEffects(settings, lightMode) }).state;
+}
+
+/** Swap the language support on a live view (active tab). */
+export function applyLanguage(view: EditorView, language: Extension): EditorState {
+  view.dispatch({ effects: languageComp.reconfigure(language) });
+  return view.state;
+}
+
+/** Swap the language support on a detached editor state (inactive tab). */
+export function retargetLanguage(state: EditorState, language: Extension): EditorState {
+  return state.update({ effects: languageComp.reconfigure(language) }).state;
 }
 
 export function caretPosition(state: EditorState): { line: number; column: number } {

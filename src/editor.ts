@@ -13,7 +13,15 @@ import {
   lineNumbers,
   type LayerMarker,
 } from "@codemirror/view";
-import { fontStackFor, normalizeTabSize, type CaretWidth, type FontFamilyId, type StoredEditorSettings } from "./state.ts";
+import {
+  fontStackFor,
+  normalizeEditorPadding,
+  normalizeLineSpacing,
+  normalizeTabSize,
+  type CaretWidth,
+  type FontFamilyId,
+  type StoredEditorSettings,
+} from "./state.ts";
 
 export type EditorSettings = StoredEditorSettings;
 
@@ -21,6 +29,7 @@ const fontComp = new Compartment();
 const wrapComp = new Compartment();
 const gutterComp = new Compartment();
 const indentComp = new Compartment();
+const layoutComp = new Compartment();
 const activeLineComp = new Compartment();
 const caretComp = new Compartment();
 const themeComp = new Compartment();
@@ -47,12 +56,8 @@ const darkTheme = EditorView.theme(
       backgroundColor: "#181818",
       color: "#c8c8c8",
     },
-    ".cm-scroller": {
-      lineHeight: "1.5",
-    },
     ".cm-content": {
       caretColor: "#aeafad",
-      padding: "8px 0",
       userSelect: "text",
       "-webkit-user-select": "text",
     },
@@ -87,12 +92,8 @@ const lightTheme = EditorView.theme(
       backgroundColor: "#f0ead6",
       color: "#1e1e1e",
     },
-    ".cm-scroller": {
-      lineHeight: "1.5",
-    },
     ".cm-content": {
       caretColor: "#1e1e1e",
-      padding: "8px 0",
       userSelect: "text",
       "-webkit-user-select": "text",
     },
@@ -126,9 +127,18 @@ function fontTheme(family: FontFamilyId, px: number): Extension {
   });
 }
 
-function indentExtensions(tabSize: number): Extension[] {
+function indentExtensions(tabSize: number, insertSpaces: boolean): Extension[] {
   const size = normalizeTabSize(tabSize);
-  return [EditorState.tabSize.of(size), indentUnit.of(" ".repeat(size))];
+  return [EditorState.tabSize.of(size), indentUnit.of(insertSpaces ? " ".repeat(size) : "\t")];
+}
+
+function layoutTheme(lineSpacing: number, editorPadding: number): Extension {
+  const spacing = normalizeLineSpacing(lineSpacing);
+  const padding = normalizeEditorPadding(editorPadding);
+  return EditorView.theme({
+    ".cm-scroller": { lineHeight: String(spacing) },
+    ".cm-content": { padding: `${padding}px` },
+  });
 }
 
 function activeLineExtensions(enabled: boolean): Extension[] {
@@ -399,7 +409,8 @@ function settingEffects(settings: EditorSettings, lightMode: boolean) {
     fontComp.reconfigure(fontTheme(settings.fontFamily, settings.fontSize)),
     wrapComp.reconfigure(settings.wordWrap ? EditorView.lineWrapping : []),
     gutterComp.reconfigure(settings.lineNumbers ? lineNumbers() : []),
-    indentComp.reconfigure(indentExtensions(settings.tabSize)),
+    indentComp.reconfigure(indentExtensions(settings.tabSize, settings.insertSpaces)),
+    layoutComp.reconfigure(layoutTheme(settings.lineSpacing, settings.editorPadding)),
     activeLineComp.reconfigure(activeLineExtensions(settings.highlightCurrentLine)),
     caretComp.reconfigure(caretExtensions(settings.caretBlink, settings.caretWidth, lightMode, settings.vimMode)),
     themeComp.reconfigure(lightMode ? lightTheme : darkTheme),
@@ -419,7 +430,8 @@ export function createDocument(
       fontComp.of(fontTheme(settings.fontFamily, settings.fontSize)),
       wrapComp.of(settings.wordWrap ? EditorView.lineWrapping : []),
       gutterComp.of(settings.lineNumbers ? lineNumbers() : []),
-      indentComp.of(indentExtensions(settings.tabSize)),
+      indentComp.of(indentExtensions(settings.tabSize, settings.insertSpaces)),
+      layoutComp.of(layoutTheme(settings.lineSpacing, settings.editorPadding)),
       activeLineComp.of(activeLineExtensions(settings.highlightCurrentLine)),
       caretComp.of(caretExtensions(settings.caretBlink, settings.caretWidth, lightMode, settings.vimMode)),
       themeComp.of(lightMode ? lightTheme : darkTheme),

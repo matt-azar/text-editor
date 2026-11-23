@@ -1,8 +1,10 @@
 import assert from "node:assert/strict";
 import { test } from "node:test";
 import {
+  ERR_FILE_NOT_FOUND,
   fileName,
   isDirty,
+  isMissingFileError,
   nextTabIndex,
   nextUntitled,
   normalizeChromeSettings,
@@ -12,9 +14,12 @@ import {
   normalizeFontFamily,
   normalizeLineSpacing,
   normalizeTabSize,
+  openFailureAction,
+  parseExFileArg,
   pushRecent,
   readChromeSettings,
   readEditorSettings,
+  resolveExFilePath,
   windowTitle,
   writeChromeSettings,
   writeEditorSettings,
@@ -46,6 +51,38 @@ test("fileName reads the last path segment", () => {
   assert.equal(fileName("C:\\notes\\today.txt"), "today.txt");
   assert.equal(fileName("/home/matt/today.txt"), "today.txt");
   assert.equal(fileName("today.txt"), "today.txt");
+});
+
+test("parseExFileArg strips bang, quotes, and empty args", () => {
+  assert.equal(parseExFileArg({ argString: "x.txt" }), "x.txt");
+  assert.equal(parseExFileArg({ args: ["x.txt"] }), "x.txt");
+  assert.equal(parseExFileArg({ argString: '! "notes.md"' }), "notes.md");
+  assert.equal(parseExFileArg({ argString: "  " }), null);
+  assert.equal(parseExFileArg({}), null);
+});
+
+test("resolveExFilePath keeps absolute paths and joins relatives", () => {
+  assert.equal(resolveExFilePath("/tmp/x.txt", "/home/matt/a.txt"), "/tmp/x.txt");
+  assert.equal(resolveExFilePath("C:\\tmp\\x.txt", "D:\\notes\\a.txt"), "C:\\tmp\\x.txt");
+  assert.equal(resolveExFilePath("x.txt", "/home/matt/a.txt"), "/home/matt/x.txt");
+  assert.equal(resolveExFilePath("x.txt", "C:\\notes\\a.txt"), "C:\\notes\\x.txt");
+  assert.equal(resolveExFilePath("x.txt", null), "x.txt");
+});
+
+test("isMissingFileError matches the Tauri not-found message", () => {
+  assert.equal(isMissingFileError(ERR_FILE_NOT_FOUND), true);
+  assert.equal(isMissingFileError(new Error(ERR_FILE_NOT_FOUND)), true);
+  assert.equal(isMissingFileError("Could not read the file."), false);
+  assert.equal(isMissingFileError("Choose a file."), false);
+  assert.equal(isMissingFileError("This file isn't UTF-8."), false);
+});
+
+test("openFailureAction creates a buffer only for missing paths when asked", () => {
+  assert.equal(openFailureAction(ERR_FILE_NOT_FOUND, true), "create");
+  assert.equal(openFailureAction(ERR_FILE_NOT_FOUND, false), "error");
+  assert.equal(openFailureAction("Could not read the file.", true), "error");
+  assert.equal(openFailureAction("Choose a file.", true), "error");
+  assert.equal(openFailureAction("This file isn't UTF-8.", true), "error");
 });
 
 test("nextUntitled skips names already used", () => {

@@ -8,7 +8,7 @@
     "dev": "vite",
     "build": "tsc && vite build",
     "preview": "vite preview",
-    "test": "node --experimental-strip-types --test src/state.test.ts",
+    "test": "node --experimental-strip-types --test src/state.test.ts src/shortcuts.test.ts",
     "tauri": "tauri"
   },
   "dependencies": {

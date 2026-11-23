@@ -221,6 +221,54 @@ export function fileName(path: string): string {
   return parts[parts.length - 1] || path;
 }
 
+/** Raw path from a Vim Ex command’s args (`:e`, `:w`, …). */
+export function parseExFileArg(params: { argString?: string; args?: string[] }): string | null {
+  const raw = (params.args?.length ? params.args.join(" ") : params.argString ?? "")
+    .replace(/^!\s*/, "")
+    .trim()
+    .replace(/^["']|["']$/g, "")
+    .trim();
+  return raw || null;
+}
+
+/**
+ * Resolve a relative Ex path against the active file’s directory.
+ * Absolute paths (Unix, Windows drive, UNC) pass through unchanged.
+ */
+export function resolveExFilePath(raw: string, basePath: string | null | undefined): string {
+  if (/^[a-zA-Z]:[\\/]/.test(raw) || raw.startsWith("\\\\") || raw.startsWith("/")) return raw;
+  if (!basePath) return raw;
+  const slash = basePath.includes("\\") ? "\\" : "/";
+  const dir = basePath.slice(0, Math.max(basePath.lastIndexOf("/"), basePath.lastIndexOf("\\")));
+  if (!dir) return raw;
+  return `${dir}${slash}${raw}`;
+}
+
+/** Matches `files::ERR_NOT_FOUND` from the Tauri read command. */
+export const ERR_FILE_NOT_FOUND = "File not found.";
+
+function failureText(error: unknown): string {
+  if (typeof error === "string" && error.trim()) return error;
+  if (error instanceof Error && error.message) return error.message;
+  return "";
+}
+
+/** True when a read failed because the path does not exist yet. */
+export function isMissingFileError(error: unknown): boolean {
+  return failureText(error) === ERR_FILE_NOT_FOUND;
+}
+
+/**
+ * How `:e` / open should react to a read failure.
+ * Missing paths may become an empty named buffer; other failures stay errors.
+ */
+export function openFailureAction(
+  error: unknown,
+  createIfMissing: boolean,
+): "create" | "error" {
+  return createIfMissing && isMissingFileError(error) ? "create" : "error";
+}
+
 export function nextUntitled(names: string[]): string {
   if (!names.includes("Untitled")) return "Untitled";
   let index = 2;

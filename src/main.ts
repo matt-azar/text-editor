@@ -55,8 +55,11 @@ import {
   isDirty,
   nextTabIndex,
   nextUntitled,
+  openFailureAction,
+  parseExFileArg,
   readChromeSettings,
   readEditorSettings,
+  resolveExFilePath,
   CARET_WIDTH_OPTIONS,
   EDITOR_PADDING_OPTIONS,
   FONT_OPTIONS,
@@ -378,7 +381,7 @@ function newFile(): void {
   renderChrome();
 }
 
-async function openPath(path: string): Promise<void> {
+async function openPath(path: string, options: { createIfMissing?: boolean } = {}): Promise<void> {
   const existing = tabs.find((tab) => tab.path === path);
   if (existing) {
     activate(existing.id);
@@ -392,6 +395,13 @@ async function openPath(path: string): Promise<void> {
     recent = await rememberRecent(path);
     renderChrome();
   } catch (error) {
+    if (openFailureAction(error, options.createIfMissing === true) === "create") {
+      const tab = createTab(fileName(path), "", path, defaultEnding);
+      tabs.push(tab);
+      showTab(tab);
+      renderChrome();
+      return;
+    }
     await showError(errorText(error));
     try {
       recent = await forgetRecent(path);
@@ -422,9 +432,10 @@ function suggestedName(tab: Tab): string {
   return tab.name.toLowerCase().endsWith(".txt") ? tab.name : `${tab.name}.txt`;
 }
 
-async function saveTab(tab: Tab, saveAs: boolean): Promise<boolean> {
+async function saveTab(tab: Tab, saveAs: boolean, explicitPath?: string | null): Promise<boolean> {
   try {
-    let path = saveAs ? null : tab.path;
+    // Explicit Ex `:w path` always wins — never open the native save picker.
+    let path = explicitPath || (saveAs ? null : tab.path);
     if (!path) {
       const picked = await pickSavePath(suggestedName(tab));
       if (!picked) return false;
@@ -514,21 +525,11 @@ function exBang(params: { input?: string; argString?: string }): boolean {
   return /!/.test(params.input ?? "") || /^\s*!/.test(params.argString ?? "");
 }
 
-/** Path from `:e` / `:o` args; relative names resolve against the active tab’s folder. */
-function exOpenPath(params: { argString?: string; args?: string[] }): string | null {
-  const raw = (params.args?.length ? params.args.join(" ") : params.argString ?? "")
-    .replace(/^!\s*/, "")
-    .trim()
-    .replace(/^["']|["']$/g, "")
-    .trim();
+/** Path from `:e` / `:w` / `:o` args; relative names resolve against the active tab’s folder. */
+function exFilePath(params: { argString?: string; args?: string[] }): string | null {
+  const raw = parseExFileArg(params);
   if (!raw) return null;
-  if (/^[a-zA-Z]:[\\/]/.test(raw) || raw.startsWith("\\\\") || raw.startsWith("/")) return raw;
-  const base = activeTab()?.path;
-  if (!base) return raw;
-  const slash = base.includes("\\") ? "\\" : "/";
-  const dir = base.slice(0, Math.max(base.lastIndexOf("/"), base.lastIndexOf("\\")));
-  if (!dir) return raw;
-  return `${dir}${slash}${raw}`;
+  return resolveExFilePath(raw, activeTab()?.path);
 }
 
 let vimExReady = false;
@@ -538,8 +539,13 @@ async function prepareVim(): Promise<void> {
   await ensureVimLoaded();
   if (vimExReady) return;
   const { Vim } = await import("@replit/codemirror-vim");
-  const write = (): void => {
-    void saveActive(false);
+  const write = (params: { argString?: string; args?: string[] }): void => {
+    const target = exFilePath(params);
+    void (async () => {
+      const tab = activeTab();
+      if (!tab) return;
+      await saveTab(tab, false, target);
+    })();
   };
   const quit = (params: { input?: string; argString?: string }): void => {
     const tab = activeTab();
@@ -549,15 +555,16 @@ async function prepareVim(): Promise<void> {
     }
     void closeTab(tab, exBang(params));
   };
-  const writeQuit = (): void => {
+  const writeQuit = (params: { argString?: string; args?: string[] }): void => {
     void (async () => {
       const tab = activeTab();
       if (!tab) {
         await exitApp();
         return;
       }
-      if (tab.dirty) {
-        const saved = await saveTab(tab, false);
+      const target = exFilePath(params);
+      if (tab.dirty || target) {
+        const saved = await saveTab(tab, false, target);
         if (!saved) return;
       }
       await closeTab(tab, true);
@@ -574,19 +581,19 @@ async function prepareVim(): Promise<void> {
   };
 
   const open = (params: { argString?: string; args?: string[] }): void => {
-    const target = exOpenPath(params);
+    const target = exFilePath(params);
     if (!target) {
       void openFile();
       return;
     }
-    void openPath(target);
+    void openPath(target, { createIfMissing: true });
   };
 
-  Vim.defineEx("write", "w", write);
+  Vim.defineEx("write", "w", (_cm, params) => write(params));
   Vim.defineEx("quit", "q", (_cm, params) => quit(params));
-  Vim.defineEx("wq", "wq", writeQuit);
-  Vim.defineEx("xit", "x", writeQuit);
-  Vim.defineEx("exit", "exi", writeQuit);
+  Vim.defineEx("wq", "wq", (_cm, params) => writeQuit(params));
+  Vim.defineEx("xit", "x", (_cm, params) => writeQuit(params));
+  Vim.defineEx("exit", "exi", (_cm, params) => writeQuit(params));
   Vim.defineEx("qall", "qa", (_cm, params) => quitAll(params));
   Vim.defineEx("quitall", "quita", (_cm, params) => quitAll(params));
   Vim.defineEx("wqall", "wqa", writeQuitAll);

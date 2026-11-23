@@ -12,6 +12,7 @@ const MAX_RECENT: usize = 10;
 const ERR_CHOOSE_FILE: &str = "Choose a file.";
 const ERR_TOO_LARGE: &str = "This file is larger than 8 MB.";
 const ERR_UTF8: &str = "This file isn't UTF-8.";
+const ERR_NOT_FOUND: &str = "File not found.";
 const ERR_READ: &str = "Could not read the file.";
 const ERR_SAVE: &str = "Could not save the file.";
 const ERR_RECENT_READ: &str = "Could not read recent files.";
@@ -25,7 +26,7 @@ pub struct TextDocument {
 }
 
 pub fn read_text_file(path: &Path) -> Result<TextDocument, String> {
-    let meta = fs::metadata(path).map_err(|_| ERR_READ.to_string())?;
+    let meta = fs::metadata(path).map_err(map_read_meta_error)?;
     if meta.is_dir() {
         return Err(ERR_CHOOSE_FILE.to_string());
     }
@@ -33,12 +34,27 @@ pub fn read_text_file(path: &Path) -> Result<TextDocument, String> {
         return Err(ERR_TOO_LARGE.to_string());
     }
 
-    let file = fs::File::open(path).map_err(|_| ERR_READ.to_string())?;
+    let file = fs::File::open(path).map_err(map_read_io_error)?;
     let mut bytes = Vec::with_capacity(meta.len() as usize);
     file.take(MAX_FILE_BYTES + 1)
         .read_to_end(&mut bytes)
-        .map_err(|_| ERR_READ.to_string())?;
+        .map_err(map_read_io_error)?;
     decode_text(&bytes)
+}
+
+fn map_read_meta_error(error: io::Error) -> String {
+    if error.kind() == io::ErrorKind::NotFound {
+        ERR_NOT_FOUND.to_string()
+    } else {
+        ERR_READ.to_string()
+    }
+}
+
+fn map_read_io_error(error: io::Error) -> String {
+    match error.kind() {
+        io::ErrorKind::NotFound => ERR_NOT_FOUND.to_string(),
+        _ => ERR_READ.to_string(),
+    }
 }
 
 pub fn write_text_file(path: &Path, text: &str, line_ending: &str) -> Result<(), String> {
@@ -477,7 +493,7 @@ mod tests {
         assert_eq!(read_text_file(dir.path()).unwrap_err(), "Choose a file.");
         assert_eq!(
             read_text_file(&dir.path().join("missing.txt")).unwrap_err(),
-            "Could not read the file."
+            "File not found."
         );
 
         let big = dir.path().join("big.bin");

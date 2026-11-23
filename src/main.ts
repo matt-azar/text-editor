@@ -39,7 +39,9 @@ import {
   readChromeSettings,
   readEditorSettings,
   CARET_WIDTH_OPTIONS,
+  EDITOR_PADDING_OPTIONS,
   FONT_OPTIONS,
+  LINE_SPACING_OPTIONS,
   TAB_SIZE_OPTIONS,
   windowTitle,
   writeChromeSettings,
@@ -109,6 +111,7 @@ const statusEl = document.querySelector("#status") as HTMLElement;
 const statusPath = document.querySelector("#status-path") as HTMLElement;
 const statusPos = document.querySelector("#status-pos") as HTMLElement;
 const statusEnding = document.querySelector("#status-ending") as HTMLElement;
+const statusVim = document.querySelector("#status-vim") as HTMLElement;
 const menubar = document.querySelector("#menubar") as HTMLElement;
 const modal = document.querySelector("#modal") as HTMLElement;
 const maxButton = document.querySelector("#win-max") as HTMLButtonElement;
@@ -298,6 +301,8 @@ async function toggleVimMode(): Promise<void> {
   if (settings.vimMode) await prepareVim();
   saveSettings();
   pushSettings();
+  const tab = activeTab();
+  if (tab) paintStatus(tab);
 }
 
 function paintStatus(tab: Tab): void {
@@ -305,6 +310,8 @@ function paintStatus(tab: Tab): void {
   statusPath.textContent = tab.path ?? "Untitled";
   statusPos.textContent = `Ln ${position.line}, Col ${position.column}`;
   statusEnding.textContent = tab.lineEnding === "crlf" ? "CRLF" : "LF";
+  statusVim.hidden = !settings.vimMode;
+  statusVim.textContent = settings.vimMode ? "Vim" : "";
 }
 
 async function syncTitle(): Promise<void> {
@@ -588,6 +595,24 @@ function setTabSize(size: number): void {
   pushSettings();
 }
 
+function toggleInsertSpaces(): void {
+  settings.insertSpaces = !settings.insertSpaces;
+  saveSettings();
+  pushSettings();
+}
+
+function setLineSpacing(spacing: number): void {
+  settings.lineSpacing = spacing;
+  saveSettings();
+  pushSettings();
+}
+
+function setEditorPadding(padding: number): void {
+  settings.editorPadding = padding;
+  saveSettings();
+  pushSettings();
+}
+
 function setFontFamily(family: FontFamilyId): void {
   settings.fontFamily = family;
   saveSettings();
@@ -717,6 +742,37 @@ function menuItems(name: string): MenuItem[] {
           run: () => setTabSize(size),
         })),
       },
+      {
+        label: "Insert Spaces",
+        accel: "i",
+        enabled: true,
+        checked: settings.insertSpaces,
+        run: toggleInsertSpaces,
+      },
+      {
+        label: "Line Spacing",
+        accel: "s",
+        enabled: true,
+        children: LINE_SPACING_OPTIONS.map((spacing) => ({
+          label: String(spacing),
+          accel: spacing === 1 ? "1" : spacing === 1.2 ? "2" : spacing === 1.5 ? "5" : spacing === 1.8 ? "8" : "0",
+          enabled: true,
+          checked: settings.lineSpacing === spacing,
+          run: () => setLineSpacing(spacing),
+        })),
+      },
+      {
+        label: "Padding",
+        accel: "p",
+        enabled: true,
+        children: EDITOR_PADDING_OPTIONS.map((padding) => ({
+          label: `${padding} px`,
+          accel: padding === 16 ? "1" : padding === 24 ? "2" : String(padding),
+          enabled: true,
+          checked: settings.editorPadding === padding,
+          run: () => setEditorPadding(padding),
+        })),
+      },
       { label: "Vim", accel: "v", shortcut: "Ctrl+Shift+V", enabled: true, checked: settings.vimMode, run: toggleVimMode },
     ];
   }
@@ -768,7 +824,7 @@ function openMenu(name: string, focusIndex = 0): void {
     }
     if (
       name === "Settings" &&
-      (item.label === "Caret Blink" || item.label === "Tab Length" || item.label === "Vim")
+      (item.label === "Caret Blink" || item.label === "Tab Length" || item.label === "Line Spacing" || item.label === "Vim")
     ) {
       menu.append(separator());
     }

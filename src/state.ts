@@ -6,6 +6,11 @@ export type StoredEditorSettings = {
   wordWrap: boolean;
   lineNumbers: boolean;
   tabSize: number;
+  /** When true, Tab / indent inserts spaces; when false, a real tab. */
+  insertSpaces: boolean;
+  lineSpacing: number;
+  /** Padding in CSS pixels between editor text and the window/edge. */
+  editorPadding: number;
   highlightCurrentLine: boolean;
   caretBlink: boolean;
   caretWidth: CaretWidth;
@@ -24,6 +29,9 @@ export const DEFAULT_EDITOR_SETTINGS: StoredEditorSettings = {
   wordWrap: true,
   lineNumbers: true,
   tabSize: 4,
+  insertSpaces: true,
+  lineSpacing: 1.5,
+  editorPadding: 8,
   highlightCurrentLine: true,
   caretBlink: true,
   caretWidth: 2,
@@ -37,6 +45,8 @@ export const DEFAULT_CHROME_SETTINGS: StoredChromeSettings = {
 };
 
 export const TAB_SIZE_OPTIONS = [2, 4, 8] as const;
+export const LINE_SPACING_OPTIONS = [1, 1.2, 1.5, 1.8, 2] as const;
+export const EDITOR_PADDING_OPTIONS = [0, 4, 8, 16, 24] as const;
 /** Line caret widths in CSS pixels, plus a one-character block. 2 matches VS Code / Cursor’s thicker default feel. */
 export const CARET_WIDTH_OPTIONS = [1, 2, 3, "block"] as const;
 export type CaretWidth = (typeof CARET_WIDTH_OPTIONS)[number];
@@ -67,6 +77,20 @@ export type FontFamilyId = (typeof FONT_OPTIONS)[number]["id"];
 export function normalizeTabSize(value: unknown): number {
   const size = typeof value === "number" ? value : Number(value);
   return TAB_SIZE_OPTIONS.includes(size as (typeof TAB_SIZE_OPTIONS)[number]) ? size : DEFAULT_EDITOR_SETTINGS.tabSize;
+}
+
+export function normalizeLineSpacing(value: unknown): number {
+  const spacing = typeof value === "number" ? value : Number(value);
+  return LINE_SPACING_OPTIONS.includes(spacing as (typeof LINE_SPACING_OPTIONS)[number])
+    ? spacing
+    : DEFAULT_EDITOR_SETTINGS.lineSpacing;
+}
+
+export function normalizeEditorPadding(value: unknown): number {
+  const padding = typeof value === "number" ? value : Number(value);
+  return EDITOR_PADDING_OPTIONS.includes(padding as (typeof EDITOR_PADDING_OPTIONS)[number])
+    ? padding
+    : DEFAULT_EDITOR_SETTINGS.editorPadding;
 }
 
 export function normalizeCaretWidth(value: unknown): CaretWidth {
@@ -105,6 +129,9 @@ export function normalizeEditorSettings(raw: RawEditorSettings | null | undefine
     wordWrap: raw?.wordWrap !== false,
     lineNumbers: raw?.lineNumbers !== false,
     tabSize: normalizeTabSize(raw?.tabSize),
+    insertSpaces: raw?.insertSpaces !== false,
+    lineSpacing: normalizeLineSpacing(raw?.lineSpacing),
+    editorPadding: normalizeEditorPadding(raw?.editorPadding),
     highlightCurrentLine: raw?.highlightCurrentLine !== false,
     caretBlink: blink !== false,
     caretWidth: raw?.thickCursor === true ? "block" : normalizeCaretWidth(raw?.caretWidth ?? raw?.cursorWidth),
@@ -136,6 +163,9 @@ export function readEditorSettings(storage: Storage): StoredEditorSettings {
     wordWrap: storage.getItem("text-editor-wrap") !== "off",
     lineNumbers: storage.getItem("text-editor-gutter") !== "off",
     tabSize: Number(storage.getItem("text-editor-tab-size")),
+    insertSpaces: storage.getItem("text-editor-insert-spaces") !== "off",
+    lineSpacing: Number(storage.getItem("text-editor-line-spacing")),
+    editorPadding: Number(storage.getItem("text-editor-editor-padding")),
     highlightCurrentLine: storage.getItem("text-editor-active-line") !== "off",
     caretBlink: (storage.getItem("text-editor-caret-blink") ?? storage.getItem("text-editor-cursor-blink")) !== "off",
     caretWidth: (storage.getItem("text-editor-caret-width") ?? storage.getItem("text-editor-cursor-width")) === "block"
@@ -154,6 +184,9 @@ export function writeEditorSettings(storage: Storage, settings: StoredEditorSett
   storage.setItem("text-editor-wrap", settings.wordWrap ? "on" : "off");
   storage.setItem("text-editor-gutter", settings.lineNumbers ? "on" : "off");
   storage.setItem("text-editor-tab-size", String(settings.tabSize));
+  storage.setItem("text-editor-insert-spaces", settings.insertSpaces ? "on" : "off");
+  storage.setItem("text-editor-line-spacing", String(settings.lineSpacing));
+  storage.setItem("text-editor-editor-padding", String(settings.editorPadding));
   storage.setItem("text-editor-active-line", settings.highlightCurrentLine ? "on" : "off");
   storage.setItem("text-editor-caret-blink", settings.caretBlink ? "on" : "off");
   storage.setItem("text-editor-caret-width", String(settings.caretWidth));

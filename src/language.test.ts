@@ -19,7 +19,12 @@ test("languageForPath matches common extensions", () => {
   assert.equal(languageForPath("main.go")?.name, "Go");
   assert.equal(languageForPath("Main.java")?.name, "Java");
   assert.equal(languageForPath("main.c")?.name, "C");
+  assert.equal(languageForPath("stdio.h")?.name, "C");
   assert.equal(languageForPath("main.cpp")?.name, "C++");
+  assert.equal(languageForPath("main.cc")?.name, "C++");
+  assert.equal(languageForPath("main.hpp")?.name, "C++");
+  assert.equal(languageForPath("main.zig")?.name, "Zig");
+  assert.equal(languageForPath("build.zig.zon")?.name, "Zig");
   assert.equal(languageForPath("Program.cs")?.name, "C#");
   assert.equal(languageForPath("data.json")?.name, "JSON");
   assert.equal(languageForPath("index.html")?.name, "HTML");
@@ -50,6 +55,12 @@ test("languageForPath leaves plain text and unknown extensions unhighlighted", (
 test("languageSupportForPath loads a known language and returns empty for plain text", async () => {
   const python = await languageSupportForPath("app.py");
   assert.ok(python);
+  const c = await languageSupportForPath("main.c");
+  assert.ok(c);
+  const cpp = await languageSupportForPath("main.cpp");
+  assert.ok(cpp);
+  const zig = await languageSupportForPath("main.zig");
+  assert.ok(zig);
   const plain = await languageSupportForPath("notes.txt");
   assert.deepEqual(plain, []);
 });

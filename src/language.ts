@@ -12,11 +12,23 @@ function loadPacked(name: string): Promise<LanguageSupport> {
   return desc.load();
 }
 
+/** Lazy Zig support (not in `@codemirror/language-data`). */
+function loadZig(): Promise<LanguageSupport> {
+  return import("codemirror-lang-zig").then((mod) => mod.zig());
+}
+
 /**
- * Filename-only aliases ahead of `@codemirror/language-data` so Makefile /
- * case-insensitive Dockerfile and a few shell extensions resolve.
+ * Extra languages / filename aliases ahead of `@codemirror/language-data`.
+ * C and C++ come from the pack; Zig, Makefile, Dockerfile variants, and a few
+ * shell extensions are wired here.
  */
 const extras: LanguageDescription[] = [
+  LanguageDescription.of({
+    name: "Zig",
+    alias: ["zig"],
+    extensions: ["zig", "zon"],
+    load: () => loadZig(),
+  }),
   LanguageDescription.of({
     name: "Makefile",
     alias: ["make"],

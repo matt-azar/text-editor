@@ -11,6 +11,9 @@ export const COMMAND_DEFS = [
   { id: "edit.find", label: "Find", defaultChord: "Ctrl+F" },
   { id: "edit.replace", label: "Replace", defaultChord: "Ctrl+H" },
   { id: "edit.duplicateLine", label: "Duplicate Line", defaultChord: "Ctrl+Shift+D" },
+  { id: "edit.insertLineAbove", label: "Insert Line Above", defaultChord: "Ctrl+Shift+Enter" },
+  { id: "edit.indent", label: "Indent Line", defaultChord: "Ctrl+]" },
+  { id: "edit.outdent", label: "Outdent Line", defaultChord: "Ctrl+[" },
   { id: "edit.moveLineUp", label: "Move Line Up", defaultChord: "Alt+ArrowUp" },
   { id: "edit.moveLineDown", label: "Move Line Down", defaultChord: "Alt+ArrowDown" },
   { id: "view.wordWrap", label: "Word Wrap", defaultChord: "Alt+Z" },
@@ -175,6 +178,22 @@ export function normalizeChordString(value: string): string | null {
     }
     if (/^arrow(up|down|left|right)$/i.test(part)) {
       key = `Arrow${part.slice(5, 6).toUpperCase()}${part.slice(6).toLowerCase()}`;
+      continue;
+    }
+    if (/^(enter|tab|escape|space|backspace|delete|home|end|pageup|pagedown)$/i.test(part)) {
+      const named: Record<string, string> = {
+        enter: "Enter",
+        tab: "Tab",
+        escape: "Escape",
+        space: "Space",
+        backspace: "Backspace",
+        delete: "Delete",
+        home: "Home",
+        end: "End",
+        pageup: "PageUp",
+        pagedown: "PageDown",
+      };
+      key = named[lower];
       continue;
     }
     key = part.length === 1 ? part.toUpperCase() : part;

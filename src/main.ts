@@ -22,9 +22,12 @@ import {
   caretPosition,
   duplicateLines,
   ensureVimLoaded,
+  indentLines,
+  insertLineAbove,
   moveLines,
   openFind,
   openReplace,
+  outdentLines,
   pasteClipboard,
   retarget,
   retargetLanguage,
@@ -724,6 +727,9 @@ function menuItems(name: string): MenuItem[] {
   if (name === "Selection") {
     return [
       { label: "Duplicate Line", accel: "d", shortcut: chordHint("edit.duplicateLine"), enabled: hasTab, run: () => withEditor(duplicateLines) },
+      { label: "Insert Line Above", accel: "a", shortcut: chordHint("edit.insertLineAbove"), enabled: hasTab, run: () => withEditor(insertLineAbove) },
+      { label: "Indent Line", accel: "i", shortcut: chordHint("edit.indent"), enabled: hasTab, run: () => withEditor(indentLines) },
+      { label: "Outdent Line", accel: "o", shortcut: chordHint("edit.outdent"), enabled: hasTab, run: () => withEditor(outdentLines) },
       { label: "Move Line Up", accel: "u", shortcut: chordHint("edit.moveLineUp"), enabled: hasTab, run: () => withEditor((editor) => moveLines(editor, -1)) },
       { label: "Move Line Down", accel: "n", shortcut: chordHint("edit.moveLineDown"), enabled: hasTab, run: () => withEditor((editor) => moveLines(editor, 1)) },
     ];
@@ -1160,6 +1166,15 @@ function runCommand(id: CommandId): void {
       return;
     case "edit.duplicateLine":
       withEditor(duplicateLines);
+      return;
+    case "edit.insertLineAbove":
+      withEditor(insertLineAbove);
+      return;
+    case "edit.indent":
+      withEditor(indentLines);
+      return;
+    case "edit.outdent":
+      withEditor(outdentLines);
       return;
     case "edit.moveLineUp":
       withEditor((editor) => moveLines(editor, -1));

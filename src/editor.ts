@@ -1,4 +1,14 @@
-import { defaultKeymap, history, historyKeymap, indentWithTab, redo, selectAll, undo } from "@codemirror/commands";
+import {
+  defaultKeymap,
+  history,
+  historyKeymap,
+  indentLess,
+  indentMore,
+  indentWithTab,
+  redo,
+  selectAll,
+  undo,
+} from "@codemirror/commands";
 import { bracketMatching, HighlightStyle, indentUnit, syntaxHighlighting } from "@codemirror/language";
 import { highlightSelectionMatches, openSearchPanel, search, searchKeymap } from "@codemirror/search";
 import { Compartment, EditorSelection, EditorState, Prec, type Extension } from "@codemirror/state";
@@ -601,6 +611,9 @@ export function createDocument(
         { key: "Mod-y", run: redo, preventDefault: true },
         { key: "Mod-h", run: openReplace, preventDefault: true },
         { key: "Mod-Shift-d", run: duplicateLines, preventDefault: true },
+        { key: "Mod-Shift-Enter", run: insertLineAbove, preventDefault: true },
+        { key: "Mod-[", run: outdentLines, preventDefault: true },
+        { key: "Mod-]", run: indentLines, preventDefault: true },
         { key: "Alt-ArrowUp", run: (view) => moveLines(view, -1), preventDefault: true },
         { key: "Alt-ArrowDown", run: (view) => moveLines(view, 1), preventDefault: true },
         indentWithTab,
@@ -710,6 +723,32 @@ export function duplicateLines(view: EditorView): boolean {
   }
   view.focus();
   return true;
+}
+
+/** Insert an empty line above the caret line; place the caret on it (VS Code style). */
+export function insertLineAbove(view: EditorView): boolean {
+  const { state } = view;
+  if (state.readOnly) return false;
+  const range = state.selection.main;
+  const line = state.doc.lineAt(Math.min(range.from, range.to));
+  const indent = /^\s*/.exec(line.text)?.[0] ?? "";
+  const at = line.from;
+  view.dispatch({
+    changes: { from: at, insert: `${indent}${state.lineBreak}` },
+    selection: EditorSelection.cursor(at + indent.length),
+    scrollIntoView: true,
+    userEvent: "input",
+  });
+  view.focus();
+  return true;
+}
+
+export function indentLines(view: EditorView): boolean {
+  return indentMore(view);
+}
+
+export function outdentLines(view: EditorView): boolean {
+  return indentLess(view);
 }
 
 export function moveLines(view: EditorView, dir: -1 | 1): boolean {

@@ -91,3 +91,15 @@ test("shortcut overrides round-trip and drop defaults", () => {
   writeShortcutOverrides(storage, {});
   assert.equal(storage.getItem("text-editor-shortcuts"), null);
 });
+
+test("default bindings include insert-line-above and indent/outdent", () => {
+  assert.equal(DEFAULT_BINDINGS["edit.insertLineAbove"], "Ctrl+Shift+Enter");
+  assert.equal(DEFAULT_BINDINGS["edit.indent"], "Ctrl+]");
+  assert.equal(DEFAULT_BINDINGS["edit.outdent"], "Ctrl+[");
+  assert.equal(normalizeChordString("ctrl+shift+enter"), "Ctrl+Shift+Enter");
+  assert.equal(normalizeChordString("Ctrl+]"), "Ctrl+]");
+  assert.equal(normalizeChordString("ctrl+["), "Ctrl+[");
+  assert.equal(conflictingCommands(DEFAULT_BINDINGS).size, 0);
+  assert.equal(chordLookup(DEFAULT_BINDINGS).get("Ctrl+Shift+Enter"), "edit.insertLineAbove");
+  assert.equal(chordLookup(DEFAULT_BINDINGS).get("Ctrl+["), "edit.outdent");
+});

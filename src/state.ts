@@ -65,6 +65,7 @@ export const FONT_OPTIONS = [
   { id: "vt323", label: "VT323", accel: "v", stack: "VT323, monospace" },
   { id: "press-start-2p", label: "Press Start 2P", accel: "p", stack: '"Press Start 2P", monospace' },
   { id: "silkscreen", label: "Silkscreen", accel: "k", stack: "Silkscreen, monospace" },
+  { id: "inconsolata", label: "Inconsolata", accel: "o", stack: "Inconsolata, monospace" },
   { id: "segoe-ui-mono", label: "Segoe UI Mono", accel: "s", stack: '"Segoe UI Mono", Consolas, monospace' },
   { id: "jetbrains-mono", label: "JetBrains Mono", accel: "j", stack: '"JetBrains Mono", Consolas, monospace' },
   { id: "fira-code", label: "Fira Code", accel: "f", stack: '"Fira Code", Consolas, monospace' },

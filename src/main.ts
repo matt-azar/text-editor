@@ -603,6 +603,9 @@ async function prepareVim(): Promise<void> {
   Vim.defineEx("xall", "xa", writeQuitAll);
   Vim.defineEx("edit", "e", (_cm, params) => open(params));
   Vim.defineEx("open", "o", (_cm, params) => open(params));
+  // Match common GUI Vim: Ctrl+Up/Down scroll the viewport like Ctrl-y / Ctrl-e.
+  Vim.mapCommand("<C-Up>", "action", "scroll", { forward: false, linewise: true }, { context: "normal" });
+  Vim.mapCommand("<C-Down>", "action", "scroll", { forward: true, linewise: true }, { context: "normal" });
   vimExReady = true;
 }
 

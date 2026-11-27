@@ -27,14 +27,14 @@ fn write_text(path: String, text: String, line_ending: String) -> Result<(), Str
 }
 
 #[tauri::command]
-async fn pick_open_path(app: tauri::AppHandle) -> Result<Option<String>, String> {
-    pick_path("Could not open the file dialog.", move || {
+async fn pick_open_paths(app: tauri::AppHandle) -> Result<Option<Vec<String>>, String> {
+    pick_paths("Could not open the file dialog.", move || {
         app.dialog()
             .file()
             .set_title("Open")
             .add_filter("All files", &["*"])
             .add_filter("Text", TEXT_EXTENSIONS)
-            .blocking_pick_file()
+            .blocking_pick_files()
     })
     .await
 }
@@ -105,7 +105,7 @@ pub fn run() {
         .invoke_handler(tauri::generate_handler![
             read_text,
             write_text,
-            pick_open_path,
+            pick_open_paths,
             pick_save_path,
             load_recent,
             remember_recent,
@@ -126,6 +126,33 @@ where
         .map_err(|_| dialog_error.to_string())?;
     match picked {
         Some(path) => file_path_to_string(path).map(Some),
+        None => Ok(None),
+    }
+}
+
+async fn pick_paths<F>(dialog_error: &'static str, pick: F) -> Result<Option<Vec<String>>, String>
+where
+    F: FnOnce() -> Option<Vec<FilePath>> + Send + 'static,
+{
+    let picked = tauri::async_runtime::spawn_blocking(pick)
+        .await
+        .map_err(|_| dialog_error.to_string())?;
+    match picked {
+        Some(paths) => {
+            let mut out = Vec::with_capacity(paths.len());
+            for path in paths {
+                let path = file_path_to_string(path)?;
+                // Native picker is files-only; skip directories if a platform returns one.
+                if Path::new(&path).is_file() {
+                    out.push(path);
+                }
+            }
+            if out.is_empty() {
+                Ok(None)
+            } else {
+                Ok(Some(out))
+            }
+        }
         None => Ok(None),
     }
 }

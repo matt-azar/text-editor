@@ -14,6 +14,8 @@ export type StoredEditorSettings = {
   highlightCurrentLine: boolean;
   caretBlink: boolean;
   caretWidth: CaretWidth;
+  /** Auto-insert closing `()[]{}` and quotes; wrap selection when present. */
+  autoCloseBrackets: boolean;
   vimMode: boolean;
 };
 
@@ -35,6 +37,7 @@ export const DEFAULT_EDITOR_SETTINGS: StoredEditorSettings = {
   highlightCurrentLine: true,
   caretBlink: true,
   caretWidth: 2,
+  autoCloseBrackets: true,
   vimMode: false,
 };
 
@@ -136,6 +139,7 @@ export function normalizeEditorSettings(raw: RawEditorSettings | null | undefine
     highlightCurrentLine: raw?.highlightCurrentLine !== false,
     caretBlink: blink !== false,
     caretWidth: raw?.thickCursor === true ? "block" : normalizeCaretWidth(raw?.caretWidth ?? raw?.cursorWidth),
+    autoCloseBrackets: raw?.autoCloseBrackets !== false,
     vimMode: raw?.vimMode === true,
   };
 }
@@ -172,6 +176,7 @@ export function readEditorSettings(storage: Storage): StoredEditorSettings {
     caretWidth: (storage.getItem("text-editor-caret-width") ?? storage.getItem("text-editor-cursor-width")) === "block"
       ? "block"
       : Number(storage.getItem("text-editor-caret-width") ?? storage.getItem("text-editor-cursor-width")),
+    autoCloseBrackets: storage.getItem("text-editor-auto-close-brackets") !== "off",
     vimMode: storage.getItem("text-editor-vim") === "on",
     thickCursor: storage.getItem("text-editor-thick-cursor") === "on",
   });
@@ -191,6 +196,7 @@ export function writeEditorSettings(storage: Storage, settings: StoredEditorSett
   storage.setItem("text-editor-active-line", settings.highlightCurrentLine ? "on" : "off");
   storage.setItem("text-editor-caret-blink", settings.caretBlink ? "on" : "off");
   storage.setItem("text-editor-caret-width", String(settings.caretWidth));
+  storage.setItem("text-editor-auto-close-brackets", settings.autoCloseBrackets ? "on" : "off");
   storage.setItem("text-editor-vim", settings.vimMode ? "on" : "off");
 }
 

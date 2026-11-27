@@ -655,6 +655,12 @@ function toggleInsertSpaces(): void {
   pushSettings();
 }
 
+function toggleAutoCloseBrackets(): void {
+  settings.autoCloseBrackets = !settings.autoCloseBrackets;
+  saveSettings();
+  pushSettings();
+}
+
 function setLineSpacing(spacing: number): void {
   settings.lineSpacing = spacing;
   saveSettings();
@@ -830,6 +836,20 @@ function menuItems(name: string): MenuItem[] {
           run: () => setEditorPadding(padding),
         })),
       },
+      {
+        label: "Programming",
+        accel: "g",
+        enabled: true,
+        children: [
+          {
+            label: "Auto-close Brackets",
+            accel: "a",
+            enabled: true,
+            checked: settings.autoCloseBrackets,
+            run: toggleAutoCloseBrackets,
+          },
+        ],
+      },
       { label: "Vim", accel: "v", shortcut: chordHint("settings.vim"), enabled: true, checked: settings.vimMode, run: toggleVimMode },
       {
         label: "Keyboard Shortcuts",
@@ -892,7 +912,7 @@ function openMenu(name: string, focusIndex = 0): void {
       (item.label === "Caret Blink" ||
         item.label === "Tab Length" ||
         item.label === "Line Spacing" ||
-        item.label === "Vim" ||
+        item.label === "Programming" ||
         item.label === "Keyboard Shortcuts")
     ) {
       menu.append(separator());

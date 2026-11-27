@@ -1,3 +1,4 @@
+import { closeBrackets, closeBracketsKeymap } from "@codemirror/autocomplete";
 import {
   defaultKeymap,
   history,
@@ -45,6 +46,7 @@ const activeLineComp = new Compartment();
 const caretComp = new Compartment();
 const themeComp = new Compartment();
 const languageComp = new Compartment();
+const closeBracketsComp = new Compartment();
 const vimComp = new Compartment();
 
 /** Syntax colors for the dark editor chrome (#181818). */
@@ -306,6 +308,11 @@ function layoutTheme(lineSpacing: number, editorPadding: number): Extension {
 
 function activeLineExtensions(enabled: boolean): Extension[] {
   return enabled ? [highlightActiveLine(), highlightActiveLineGutter()] : [];
+}
+
+/** Auto-close `()[]{}` and quotes; wrap selection; Backspace deletes the pair. */
+function closeBracketsExtensions(enabled: boolean): Extension[] {
+  return enabled ? [closeBrackets(), keymap.of(closeBracketsKeymap)] : [];
 }
 
 type GraphemeSegmenter = {
@@ -577,6 +584,7 @@ function settingEffects(settings: EditorSettings, lightMode: boolean) {
     activeLineComp.reconfigure(activeLineExtensions(settings.highlightCurrentLine)),
     caretComp.reconfigure(caretExtensions(settings.caretBlink, settings.caretWidth, lightMode, settings.vimMode)),
     themeComp.reconfigure(lightMode ? lightTheme : darkTheme),
+    closeBracketsComp.reconfigure(closeBracketsExtensions(settings.autoCloseBrackets)),
     vimComp.reconfigure(settings.vimMode ? vimExtension() : []),
   ];
 }
@@ -600,6 +608,7 @@ export function createDocument(
       themeComp.of(lightMode ? lightTheme : darkTheme),
       languageComp.of([]),
       highlightExtensions,
+      closeBracketsComp.of(closeBracketsExtensions(settings.autoCloseBrackets)),
       vimComp.of(settings.vimMode ? vimExtension() : []),
       history(),
       EditorView.editable.of(true),

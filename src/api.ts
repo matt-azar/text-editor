@@ -14,8 +14,9 @@ export function writeText(path: string, text: string, lineEnding: LineEnding): P
   return invoke("write_text", { path, text, lineEnding });
 }
 
-export function pickOpenPath(): Promise<string | null> {
-  return invoke<string | null>("pick_open_path");
+/** Native Open dialog; multiple selection. `null` if cancelled or nothing usable. */
+export function pickOpenPaths(): Promise<string[] | null> {
+  return invoke<string[] | null>("pick_open_paths");
 }
 
 export function pickSavePath(suggestedName: string): Promise<string | null> {

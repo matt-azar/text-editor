@@ -7,7 +7,7 @@ import {
   errorText,
   forgetRecent,
   loadRecent,
-  pickOpenPath,
+  pickOpenPaths,
   pickSavePath,
   readText,
   rememberRecent,
@@ -416,8 +416,9 @@ async function openPath(path: string, options: { createIfMissing?: boolean } = {
 
 async function openFile(): Promise<void> {
   try {
-    const path = await pickOpenPath();
-    if (path) await openPath(path);
+    const paths = await pickOpenPaths();
+    if (!paths) return;
+    for (const path of paths) await openPath(path);
   } catch (error) {
     await showError(errorText(error));
   }

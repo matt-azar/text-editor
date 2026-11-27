@@ -1416,6 +1416,11 @@ function onKeyDown(event: KeyboardEvent): void {
   const chord = chordFromEvent(event);
   if (!chord) return;
 
+  // Vim owns Ctrl+u / Ctrl+d (half-page scroll) when the editor is focused.
+  if (settings.vimMode && view?.hasFocus && (chord === "Ctrl+U" || chord === "Ctrl+D")) {
+    return;
+  }
+
   const command = bindingLookup.get(chord);
   if (command) {
     event.preventDefault();

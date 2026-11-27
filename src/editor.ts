@@ -48,6 +48,7 @@ const themeComp = new Compartment();
 const languageComp = new Compartment();
 const closeBracketsComp = new Compartment();
 const vimComp = new Compartment();
+const keymapComp = new Compartment();
 
 /** Syntax colors for the dark editor chrome (#181818). */
 const darkHighlight = HighlightStyle.define(
@@ -212,6 +213,30 @@ export async function ensureVimLoaded(): Promise<void> {
 
 function vimExtension(): Extension {
   return vimFactory ? vimFactory() : [];
+}
+
+/** Base editor chords; drop Mod-d / Mod-u when Vim is on so Ctrl+d / Ctrl+u half-page scroll. */
+function editorKeymap(vimMode: boolean): Extension {
+  const historyKeys = vimMode
+    ? historyKeymap.filter((binding) => binding.key !== "Mod-u")
+    : historyKeymap;
+  const searchKeys = vimMode
+    ? searchKeymap.filter((binding) => binding.key !== "Mod-d")
+    : searchKeymap;
+  return keymap.of([
+    { key: "Mod-y", run: redo, preventDefault: true },
+    { key: "Mod-h", run: openReplace, preventDefault: true },
+    { key: "Mod-Shift-d", run: duplicateLines, preventDefault: true },
+    { key: "Mod-Shift-Enter", run: insertLineAbove, preventDefault: true },
+    { key: "Mod-[", run: outdentLines, preventDefault: true },
+    { key: "Mod-]", run: indentLines, preventDefault: true },
+    { key: "Alt-ArrowUp", run: (view) => moveLines(view, -1), preventDefault: true },
+    { key: "Alt-ArrowDown", run: (view) => moveLines(view, 1), preventDefault: true },
+    indentWithTab,
+    ...defaultKeymap,
+    ...historyKeys,
+    ...searchKeys,
+  ]);
 }
 
 const darkTheme = EditorView.theme(
@@ -586,6 +611,7 @@ function settingEffects(settings: EditorSettings, lightMode: boolean) {
     themeComp.reconfigure(lightMode ? lightTheme : darkTheme),
     closeBracketsComp.reconfigure(closeBracketsExtensions(settings.autoCloseBrackets)),
     vimComp.reconfigure(settings.vimMode ? vimExtension() : []),
+    keymapComp.reconfigure(editorKeymap(settings.vimMode)),
   ];
 }
 
@@ -616,20 +642,7 @@ export function createDocument(
       highlightSelectionMatches(),
       search({ top: true }),
       EditorView.contentAttributes.of({ spellcheck: "false", "data-enable-grammarcheck": "false" }),
-      keymap.of([
-        { key: "Mod-y", run: redo, preventDefault: true },
-        { key: "Mod-h", run: openReplace, preventDefault: true },
-        { key: "Mod-Shift-d", run: duplicateLines, preventDefault: true },
-        { key: "Mod-Shift-Enter", run: insertLineAbove, preventDefault: true },
-        { key: "Mod-[", run: outdentLines, preventDefault: true },
-        { key: "Mod-]", run: indentLines, preventDefault: true },
-        { key: "Alt-ArrowUp", run: (view) => moveLines(view, -1), preventDefault: true },
-        { key: "Alt-ArrowDown", run: (view) => moveLines(view, 1), preventDefault: true },
-        indentWithTab,
-        ...defaultKeymap,
-        ...historyKeymap,
-        ...searchKeymap,
-      ]),
+      keymapComp.of(editorKeymap(settings.vimMode)),
       EditorView.updateListener.of((update) => {
         if (update.docChanged || update.selectionSet || update.transactions.some((transaction) => transaction.reconfigured)) {
           onUpdate(update.state);

@@ -179,6 +179,7 @@ test("normalizeEditorSettings fills defaults", () => {
     highlightCurrentLine: true,
     caretBlink: true,
     caretWidth: 2,
+    autoCloseBrackets: true,
     vimMode: false,
   });
   assert.equal(normalizeEditorSettings({ fontSize: 18, wordWrap: false, tabSize: 2 }).fontSize, 18);
@@ -189,6 +190,7 @@ test("normalizeEditorSettings fills defaults", () => {
   assert.equal(normalizeEditorSettings({ caretBlink: false }).caretBlink, false);
   assert.equal(normalizeEditorSettings({ caretWidth: 3 }).caretWidth, 3);
   assert.equal(normalizeEditorSettings({ caretWidth: "block" }).caretWidth, "block");
+  assert.equal(normalizeEditorSettings({ autoCloseBrackets: false }).autoCloseBrackets, false);
   assert.equal(normalizeEditorSettings({ vimMode: true }).vimMode, true);
   assert.equal(normalizeEditorSettings({ insertSpaces: false }).insertSpaces, false);
   assert.equal(normalizeEditorSettings({ lineSpacing: 2 }).lineSpacing, 2);
@@ -211,6 +213,7 @@ test("editor settings round-trip through storage", () => {
     highlightCurrentLine: false,
     caretBlink: false,
     caretWidth: "block",
+    autoCloseBrackets: false,
     vimMode: true,
   });
   assert.deepEqual(readEditorSettings(storage), {
@@ -225,6 +228,7 @@ test("editor settings round-trip through storage", () => {
     highlightCurrentLine: false,
     caretBlink: false,
     caretWidth: "block",
+    autoCloseBrackets: false,
     vimMode: true,
   });
 });
@@ -256,6 +260,7 @@ test("editor settings migrate legacy localStorage keys", () => {
     highlightCurrentLine: false,
     caretBlink: false,
     caretWidth: "block",
+    autoCloseBrackets: true,
     vimMode: true,
   });
 });
